@@ -1,0 +1,30 @@
+{
+  // Example: https://github.com/jshint/jshint/blob/master/examples/.jshintrc
+  // Documentation: http://www.jshint.com/docs/options/
+  "browser": false,
+  "bitwise": true,
+  "esnext": true,
+  "globals": {
+    "exports"    : false
+  },
+  "globalstrict": true,
+  "quotmark": "double",
+  "camelcase": true,
+  "curly": true,
+  "eqeqeq": true,
+  "immed": true,
+  "latedef": true,
+  "maxdepth": 4,
+  "maxerr": 500,
+  "newcap": true,
+  "maxstatements": 25,
+  "noarg": true,
+  "nonbsp": true,
+  "nonew": true,
+  "node": true,
+  "mocha": true,
+  "singleGroups": true,
+  "sub": false,
+  "undef": true,
+  "unused": true
+}
