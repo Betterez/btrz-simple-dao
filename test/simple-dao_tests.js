@@ -5,8 +5,11 @@ describe("SimpleDao", function () {
 
   let SimpleDao = require("../").SimpleDao,
     DataMapResult = require("./data-map-result").DataMapResult,
-    expect = require("chai").expect,
+    chai = require("chai"),
+    chaiAsPromised = require("chai-as-promised"),
     sinon = require("sinon"),
+    Chance = require("chance").Chance,
+    chance =  new Chance(),
     config = {
       db: {
       options: {
@@ -18,35 +21,76 @@ describe("SimpleDao", function () {
       }
     };
 
-  let simpleDao;
+  chai.use(chaiAsPromised);
+  let expect = chai.expect, simpleDao;
   beforeEach(function () {
     simpleDao = new SimpleDao(config);
   });
 
-  describe("find(Constructor).with(query, projection, etc)", function () {
+  describe("for(Constructor)", function () {
 
-    it("should call find on the driver, passing the arguments and return a promise", function (done) {
-      let dmr = new DataMapResult("1");
-      dmr.accountId = "account-id";
-      simpleDao.save(dmr);
-      let sd = new SimpleDao(config),
-        query = {accountId: "account-id"};
-      let promise = sd.for(DataMapResult).find(query).toArray();
-      promise.then(function (models) {
-        expect(models.length).to.not.be.eql(0);
-        done();
+    describe(".findById(id)", function () {
+
+      it("should get a single object for that id", function (done) {
+        let dmr = new DataMapResult("1");
+        dmr.accountId = "account-id";
+        simpleDao.save(dmr).then(function (saved) {
+          let promise = simpleDao.for(DataMapResult).findById(saved._id.toString());
+          expect(promise).to.be.fulfilled;
+          expect(promise).to.eventually.be.instanceOf(DataMapResult).and.notify(done);
+        });
+      });
+
+      it("should return null if can't find it", function (done) {
+        let promise = simpleDao.for(DataMapResult).findById(chance.hash());
+        expect(promise).to.be.fulfilled;
+        expect(promise).to.eventually.be.null.and.notify(done);
+      });
+
+    });
+
+    describe(".findOne(query)", function () {
+
+      it("should get a single object given a query", function (done) {
+        let dmr = new DataMapResult("1");
+        dmr.accountId = "account-id";
+        simpleDao.save(dmr).then(function (saved) {
+          let promise = simpleDao.for(DataMapResult).findOne({accountId: "account-id"});
+          expect(promise).to.be.fulfilled;
+          expect(promise).to.eventually.be.instanceOf(DataMapResult).and.notify(done);
+        });
+      });
+
+      it("should return null if can't find it", function (done) {
+        let promise = simpleDao.for(DataMapResult).findOne({accountId: chance.hash()});
+        expect(promise).to.be.fulfilled;
+        expect(promise).to.eventually.be.null.and.notify(done);
       });
     });
 
-    it("should throw if the ObjectType doesn't have a factory function", function () {
-      function NoFactory() {
+    describe(".find(query, projection).toArray()", function () {
 
-      }
-      function sut() {
-        let sd = new SimpleDao(config);
-        sd.for(NoFactory);
-      }
-      expect(sut).to.throw();
+      it("should call find on the driver, passing the arguments and returning a promise", function (done) {
+        let dmr = new DataMapResult("1");
+        dmr.accountId = "account-id";
+        simpleDao.save(dmr).then(function () {
+          let query = {accountId: "account-id"};
+          let promise = simpleDao.for(DataMapResult).find(query).toArray();
+          expect(promise).to.be.fulfilled;
+          expect(promise).to.eventually.have.length.above(1).and.notify(done);
+        });
+      });
+
+      it("should throw if the ObjectType doesn't have a factory function", function () {
+        function NoFactory() {
+
+        }
+        function sut() {
+          let sd = new SimpleDao(config);
+          sd.for(NoFactory);
+        }
+        expect(sut).to.throw();
+      });
     });
   });
 
@@ -66,13 +110,8 @@ describe("SimpleDao", function () {
     });
 
     it("should add the _id from the db if the object doesn't have one", function (done) {
-
-      function saved(savedDmr) {
-        expect(savedDmr._id).to.not.be.undefined;
-        done();
-      }
       let dmr = new DataMapResult("1");
-      simpleDao.save(dmr).then(saved);
+      expect(simpleDao.save(dmr)).to.eventually.have.property("_id").and.notify(done);
     });
 
     it("should infer the collection name from the Object name.toLowerCase()", function () {
@@ -84,7 +123,7 @@ describe("SimpleDao", function () {
       let dmr = new DataMapResult("1");
       let sd = new SimpleDao(config, fakeMongo);
       sd.save(dmr);
-      expect(saveSpy.calledOnce).to.be.true();
+      expect(saveSpy.calledOnce).to.be.true;
       expect(collectionSpy.getCall(0).args[0]).to.be.eql("datamapresult");
     });
   });

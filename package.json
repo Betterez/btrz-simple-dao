@@ -25,6 +25,7 @@
   },
   "homepage": "https://github.com/Betterez/btrz-simple-dao",
   "dependencies": {
+    "chai-as-promised": "^4.1.1",
     "lodash": "^2.4.1",
     "promised-mongo": "^0.11.1"
   },
@@ -33,6 +34,7 @@
     "istanbul-harmony": "latest",
     "jsinspect": "latest",
     "mocha": "latest",
+    "chance": "0.7.1",
     "mocha-multi": "latest",
     "sinon": "latest",
     "xunit-file": "latest",

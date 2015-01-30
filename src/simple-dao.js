@@ -2,11 +2,15 @@
 
 let pmongo = require("promised-mongo");
 
+function buildModel(factory) {
+  return function (model) {
+    return factory(model);
+  };
+}
+
 function mapFor(factory) {
   return function findHandler(models) {
-    return models.map(function (model) {
-      return factory(model);
-    });
+    return models.map(buildModel(factory));
   };
 }
 
@@ -38,6 +42,16 @@ Finder.prototype.find = function (query, options) {
   return new InnerCursor(cursor, this.factory);
 };
 
+Finder.prototype.findOne = function (query) {
+  let factory = this.factory;
+  return this.collection.findOne(query).then(function (model) {
+    return model ? buildModel(factory)(model) : model;
+  });
+};
+
+Finder.prototype.findById = function (id) {
+  return this.findOne({_id: id});
+};
 
 function connectionString(dbConfig) {
   let hostPortPairs = dbConfig.uris.map(function (uri) {
