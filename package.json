@@ -1,0 +1,41 @@
+{
+  "name": "btrz-simple-dao",
+  "version": "1.0.0",
+  "description": "Betterez Simple DAO",
+  "main": "index.js",
+  "scripts": {
+    "test": "NODE_ENV=test multi='xunit=test-results/xunit.xml spec=-' node_modules/istanbul-harmony/lib/cli.js cover node_modules/mocha/bin/_mocha -- --ui bdd -R mocha-multi -t 5000",
+    "test-w": "NODE_ENV=test node_modules/mocha/bin/mocha -w",
+    "start": "node_modules/forever/bin/forever . -w"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Betterez/btrz-simple-dao.git"
+  },
+  "keywords": [
+    "DAO",
+    "Mongo",
+    "Promises",
+    "io.js"
+  ],
+  "author": "Betterez",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/Betterez/btrz-simple-dao/issues"
+  },
+  "homepage": "https://github.com/Betterez/btrz-simple-dao",
+  "dependencies": {
+    "lodash": "^2.4.1",
+    "promised-mongo": "^0.11.1"
+  },
+  "devDependencies": {
+    "chai": "latest",
+    "istanbul-harmony": "latest",
+    "jsinspect": "latest",
+    "mocha": "latest",
+    "mocha-multi": "latest",
+    "sinon": "latest",
+    "xunit-file": "latest",
+    "uuid": "^2.0.1"
+  }
+}
