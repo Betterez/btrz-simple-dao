@@ -1,0 +1,10 @@
+language: node_js
+node_js:
+- '0.12'
+deploy:
+  provider: npm
+  email: support@betterez.com
+  on:
+    tags: true
+  api_key:
+    secure: Tjig9mwiaFfWkXOTc7oM1m29dJf/w5fdmE9b/ztTm45a4p75X4Ne3/gV8FVjSNlP7bj3hGo5TmBj+W7kEPmkA2okkgLUoZSiMPJp7t/8XGpDW5ZL4fnNq/YRsTQSKJ7sKQ2ikG2Oel5ftoXZN/hU8yRTcfHJaZUecfpsOo9LurQ=
