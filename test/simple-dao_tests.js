@@ -65,7 +65,7 @@ describe("SimpleDao", function () {
         }
       };
       simpleDao = new SimpleDao(config);
-      expect(simpleDao.connectionString).to.be.eql("127.0.0.1:27017/simple_dao_test,127.0.0.2:27017/simple_dao_test");
+      expect(simpleDao.connectionString).to.be.eql("127.0.0.1:27017,127.0.0.2:27017/simple_dao_test");
     });
 
     it("should generate a connection-string for many db server with username/password", function () {
@@ -83,7 +83,7 @@ describe("SimpleDao", function () {
         }
       };
       simpleDao = new SimpleDao(config);
-      expect(simpleDao.connectionString).to.be.eql("usr:pwd@127.0.0.1:27017/simple_dao_test,usr:pwd@127.0.0.2:27017/simple_dao_test");
+      expect(simpleDao.connectionString).to.be.eql("usr:pwd@127.0.0.1:27017,127.0.0.2:27017/simple_dao_test");
     });
 
   });

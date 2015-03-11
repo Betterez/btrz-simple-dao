@@ -54,15 +54,11 @@ Finder.prototype.findById = function (id) {
 };
 
 function connectionString(dbConfig) {
+  var uris = dbConfig.uris.join(",");
   if (dbConfig.options.username.length > 0) {
-    return dbConfig.uris.map(function (uri) {
-      return `${dbConfig.options.username}:${dbConfig.options.password}@${uri}/${dbConfig.options.database}`;
-    }).join(",");
+    return `${dbConfig.options.username}:${dbConfig.options.password}@${uris}/${dbConfig.options.database}`;
   }
-
-  return dbConfig.uris.map(function (uri) {
-    return `${uri}/${dbConfig.options.database}`;
-  }).join(",");
+  return `${uris}/${dbConfig.options.database}`;
 }
 
 function SimpleDao(options, _mongoDriver_) {
