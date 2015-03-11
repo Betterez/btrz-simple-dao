@@ -40,7 +40,7 @@
     "chai-as-promised": "^4.1.1",
     "istanbul-harmony": "latest",
     "jsinspect": "latest",
-    "mocha": "latest",
+    "mocha": "2.1.0",
     "chance": "0.7.1",
     "mocha-multi": "latest",
     "sinon": "latest",
