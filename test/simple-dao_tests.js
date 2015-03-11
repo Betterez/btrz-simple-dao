@@ -27,6 +27,67 @@ describe("SimpleDao", function () {
     simpleDao = new SimpleDao(config);
   });
 
+  describe("connection-string", function () {
+
+    it("should generate a connection-string for one db server no username/password", function () {
+      expect(simpleDao.connectionString).to.be.eql("127.0.0.1:27017/simple_dao_test");
+    });
+
+    it("should generate a connection-string for one db server with username/password", function () {
+      let config = {
+        db: {
+        options: {
+            database: "simple_dao_test",
+            username: "usr",
+            password: "pwd"
+          },
+          uris: [
+            "127.0.0.1:27017"
+          ]
+        }
+      };
+      simpleDao = new SimpleDao(config);
+      expect(simpleDao.connectionString).to.be.eql("usr:pwd@127.0.0.1:27017/simple_dao_test");
+    });
+
+    it("should generate a connection-string for many db servers no username/password", function () {
+      let config = {
+        db: {
+        options: {
+            database: "simple_dao_test",
+            username: "",
+            password: ""
+          },
+          uris: [
+            "127.0.0.1:27017",
+            "127.0.0.2:27017"
+          ]
+        }
+      };
+      simpleDao = new SimpleDao(config);
+      expect(simpleDao.connectionString).to.be.eql("127.0.0.1:27017/simple_dao_test,127.0.0.2:27017/simple_dao_test");
+    });
+
+    it("should generate a connection-string for many db server with username/password", function () {
+      let config = {
+        db: {
+        options: {
+            database: "simple_dao_test",
+            username: "usr",
+            password: "pwd"
+          },
+          uris: [
+            "127.0.0.1:27017",
+            "127.0.0.2:27017"
+          ]
+        }
+      };
+      simpleDao = new SimpleDao(config);
+      expect(simpleDao.connectionString).to.be.eql("usr:pwd@127.0.0.1:27017/simple_dao_test,usr:pwd@127.0.0.2:27017/simple_dao_test");
+    });
+
+  });
+
   describe("for(Constructor)", function () {
 
     describe(".findById(id)", function () {
@@ -54,7 +115,7 @@ describe("SimpleDao", function () {
       it("should get a single object given a query", function (done) {
         let dmr = new DataMapResult("1");
         dmr.accountId = "account-id";
-        simpleDao.save(dmr).then(function (saved) {
+        simpleDao.save(dmr).then(function () {
           let promise = simpleDao.for(DataMapResult).findOne({accountId: "account-id"});
           expect(promise).to.be.fulfilled;
           expect(promise).to.eventually.be.instanceOf(DataMapResult).and.notify(done);

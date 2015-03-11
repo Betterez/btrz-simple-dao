@@ -54,17 +54,20 @@ Finder.prototype.findById = function (id) {
 };
 
 function connectionString(dbConfig) {
-  let hostPortPairs = dbConfig.uris.map(function (uri) {
+  if (dbConfig.options.username.length > 0) {
+    return dbConfig.uris.map(function (uri) {
+      return `${dbConfig.options.username}:${dbConfig.options.password}@${uri}/${dbConfig.options.database}`;
+    }).join(",");
+  }
+
+  return dbConfig.uris.map(function (uri) {
     return `${uri}/${dbConfig.options.database}`;
   }).join(",");
-  if (dbConfig.options.username.length > 0) {
-    return `${dbConfig.options.username}:${dbConfig.options.password}@${hostPortPairs}`;
-  }
-  return hostPortPairs;
 }
 
 function SimpleDao(options, _mongoDriver_) {
-  this.db = _mongoDriver_ || pmongo(connectionString(options.db));
+  this.connectionString = connectionString(options.db);
+  this.db = _mongoDriver_ || pmongo(this.connectionString);
 }
 
 SimpleDao.prototype.for = function (ctrFunc) {
