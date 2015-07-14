@@ -32,6 +32,10 @@ function Finder(collection, factory) {
   this.factory = factory;
 }
 
+Finder.prototype.aggregate = function (query) {
+  return this.collection.aggregate(query);
+};
+
 Finder.prototype.find = function (query, options) {
   let cursor;
   if (!options) {

@@ -153,6 +153,34 @@ describe("SimpleDao", function () {
         expect(sut).to.throw();
       });
     });
+
+    describe(".find(query, projection).toCursor()", function () {
+      it("should call find on the driver, passing the arguments and returning a cursor", function (done) {
+        let dmr = new DataMapResult("1");
+        dmr.accountId = "account-id";
+        simpleDao.save(dmr).then(function () {
+          let query = {accountId: "account-id"};
+          let cursor = simpleDao.for(DataMapResult).find(query).toCursor();
+          expect(cursor.next).to.be.a("function");
+          done();
+        });
+      });
+    });
+
+    describe(".aggregate(query)", function () {
+
+      it("should return an Inn", function (done) {
+        let dmr = new DataMapResult("1");
+        dmr.accountId = "account-id";
+        simpleDao.save(dmr).then(function () {
+          let query = [
+            { $group: { _id: "$accountId", totalPop: { $sum: "$dataMapId" } } }
+          ];
+          let result = simpleDao.for(DataMapResult).aggregate(query);
+          expect(result).to.eventually.contain({ _id: 'account-id', totalPop: 0 }).and.notify(done);
+        });
+      });
+    });
   });
 
   describe("save(model)", function () {
@@ -190,6 +218,6 @@ describe("SimpleDao", function () {
   });
 
   after(function () {
-    simpleDao.db.dropCollection("datamapresult").done();
+    // simpleDao.db.dropCollection("datamapresult").done();
   });
 });
