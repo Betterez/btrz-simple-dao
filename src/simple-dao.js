@@ -105,6 +105,9 @@ SimpleDao.prototype.save = function (model) {
     throw new Error("model can't be undefined or null");
   }
   let collectionName = model.constructor.name.toLowerCase();
+  if (model.collectionName) {
+    collectionName = model.collectionName();
+  }
   return this.db.collection(collectionName).save(model);
 };
 
