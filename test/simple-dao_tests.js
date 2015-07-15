@@ -5,6 +5,7 @@ describe("SimpleDao", function () {
 
   let SimpleDao = require("../").SimpleDao,
     DataMapResult = require("./data-map-result").DataMapResult,
+    CollectionNameModel = require("./collection-name-model").CollectionNameModel,
     chai = require("chai"),
     chaiAsPromised = require("chai-as-promised"),
     sinon = require("sinon"),
@@ -90,6 +91,17 @@ describe("SimpleDao", function () {
 
   describe("for(Constructor)", function () {
 
+    it("should use the static collectionName()", function () {
+      let findSpy = sinon.spy();
+      let collectionSpy = sinon.spy(function () {
+        return {find: findSpy};
+      });
+      let fakeMongo = {collection: collectionSpy};
+      let sd = new SimpleDao(config, fakeMongo);
+      sd.for(CollectionNameModel).find();
+      expect(collectionSpy.getCall(0).args[0]).to.be.eql("a_simple_collection");
+    });
+
     describe(".findById(id)", function () {
 
       it("should get a single object for that id", function (done) {
@@ -169,7 +181,7 @@ describe("SimpleDao", function () {
 
     describe(".aggregate(collectionName, query)", function () {
 
-      it("should return an Inn", function (done) {
+      it("should return a promise with a cursor", function (done) {
         let dmr = new DataMapResult("1");
         dmr.accountId = "account-id";
         simpleDao.save(dmr).then(function () {
@@ -214,6 +226,19 @@ describe("SimpleDao", function () {
       sd.save(dmr);
       expect(saveSpy.calledOnce).to.be.true;
       expect(collectionSpy.getCall(0).args[0]).to.be.eql("datamapresult");
+    });
+
+    it("should use the static collectionName()", function () {
+      let saveSpy = sinon.spy();
+      let collectionSpy = sinon.spy(function () {
+        return {save: saveSpy};
+      });
+      let fakeMongo = {collection: collectionSpy};
+      let cn = new CollectionNameModel();
+      let sd = new SimpleDao(config, fakeMongo);
+      sd.save(cn);
+      expect(saveSpy.calledOnce).to.be.true;
+      expect(collectionSpy.getCall(0).args[0]).to.be.eql("a_simple_collection");
     });
   });
 
