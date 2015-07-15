@@ -167,7 +167,7 @@ describe("SimpleDao", function () {
       });
     });
 
-    describe(".aggregate(query)", function () {
+    describe(".aggregate(collectionName, query)", function () {
 
       it("should return an Inn", function (done) {
         let dmr = new DataMapResult("1");
@@ -176,8 +176,8 @@ describe("SimpleDao", function () {
           let query = [
             { $group: { _id: "$accountId", totalPop: { $sum: "$dataMapId" } } }
           ];
-          let result = simpleDao.for(DataMapResult).aggregate(query);
-          expect(result).to.eventually.contain({ _id: 'account-id', totalPop: 0 }).and.notify(done);
+          let result = simpleDao.aggregate("datamapresult", query);
+          expect(result).to.eventually.have.property("on").and.notify(done);
         });
       });
     });

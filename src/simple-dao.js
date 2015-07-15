@@ -1,6 +1,7 @@
 "use strict";
 
-let pmongo = require("promised-mongo");
+let pmongo = require("promised-mongo"),
+  MongoClient = require("mongodb").MongoClient;
 
 function buildModel(factory) {
   return function (model) {
@@ -69,6 +70,26 @@ function SimpleDao(options, _mongoDriver_) {
   this.connectionString = connectionString(options.db);
   this.db = _mongoDriver_ || pmongo(this.connectionString);
 }
+
+SimpleDao.prototype.aggregate = function (collectionName, query) {
+  var self = this;
+  function resolver(resolve, reject) {
+    MongoClient.connect(`mongodb://${self.connectionString}`, function (err, db) {
+      if (err) {
+        return reject(err);
+      }
+      var cursor = db
+        .collection(collectionName)
+        .aggregate(query,
+            {
+              allowDiskUsage: true,
+              cursor: {batchSize: 1000}
+          });
+      resolve(cursor);
+    });
+  }
+  return new Promise(resolver);
+};
 
 SimpleDao.prototype.for = function (ctrFunc) {
   if (!ctrFunc.factory) {
