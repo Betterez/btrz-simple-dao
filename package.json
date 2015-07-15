@@ -37,10 +37,9 @@
     "promised-mongo": "^0.11.1"
   },
   "devDependencies": {
-    "chai": "latest",
-    "chai-as-promised": "^4.1.1",
+    "chai": "^3.0.0",
+    "chai-as-promised": "^5.1.0",
     "istanbul-harmony": "latest",
-    "jsinspect": "latest",
     "mocha": "latest",
     "chance": "0.7.1",
     "mocha-multi": "latest",
