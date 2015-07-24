@@ -5,6 +5,7 @@ describe("SimpleDao", function () {
 
   let SimpleDao = require("../").SimpleDao,
     DataMapResult = require("./data-map-result").DataMapResult,
+    ObjectID = require("mongodb").ObjectID,
     CollectionNameModel = require("./collection-name-model").CollectionNameModel,
     chai = require("chai"),
     chaiAsPromised = require("chai-as-promised"),
@@ -26,6 +27,34 @@ describe("SimpleDao", function () {
   let expect = chai.expect, simpleDao;
   beforeEach(function () {
     simpleDao = new SimpleDao(config);
+  });
+
+  describe("objectId", function () {
+
+    describe("static method", function () {
+
+      it("should return a new objectId", function () {
+        expect(SimpleDao.objectId()).to.be.an.instanceOf(ObjectID);
+      });
+
+      it("should return an objectId from the given 24 characters argument", function () {
+        let id = "55b27c2a74757b3c5e121b0e";
+        expect(SimpleDao.objectId(id).toString()).to.be.eql(id);
+      });
+    });
+
+    describe("instance public method", function () {
+
+      it("should return a new objectId", function () {
+        expect(simpleDao.objectId()).to.be.an.instanceOf(ObjectID);
+      });
+
+      it("should return an objectId from the given 24 characters argument", function () {
+        let id = "55b27c2a74757b3c5e121b0e";
+        expect(simpleDao.objectId(id).toString()).to.be.eql(id);
+      });
+    });
+
   });
 
   describe("connection-string", function () {

@@ -2,6 +2,7 @@
 
 let pmongo = require("promised-mongo"),
   MongoClient = require("mongodb").MongoClient,
+  ObjectID = require("mongodb").ObjectID,
   Finder = require("./finder").Finder;
 
 function connectionString(dbConfig) {
@@ -21,10 +22,21 @@ function getCollectionName(ctrFunc) {
 }
 
 class SimpleDao {
-  
+
+  static objectId(id) {
+    if (id) {
+      return new ObjectID(id);
+    }
+    return new ObjectID();
+  }
+
   constructor(options, _mongoDriver_) {
     this.connectionString = connectionString(options.db);
     this.db = _mongoDriver_ || pmongo(this.connectionString);
+  }
+
+  objectId(id) {
+    return SimpleDao.objectId(id);
   }
 
   aggregate(collectionName, query) {
