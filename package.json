@@ -1,6 +1,6 @@
 {
   "name": "btrz-simple-dao",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "description": "Betterez Simple DAO",
   "main": "index.js",
   "scripts": {
@@ -21,6 +21,10 @@
     "name": "hgarcia",
     "email": "hernan@dynamicprogrammer.com"
   },
+  "contributors": [{
+    "name": "pbrudnick",
+    "email": "pbrudnick@gmail.com"
+  }],
   "licenses": [
     {
       "type": "MIT",
