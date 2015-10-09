@@ -1,6 +1,7 @@
 "use strict";
 
-var InnerCursor =  require("./inner-cursor").InnerCursor,
+let InnerCursor =  require("./inner-cursor").InnerCursor,
+  ObjectID = require("mongodb").ObjectID,
   utils = require("./utils");
 
 class Finder {
@@ -27,6 +28,13 @@ class Finder {
   }
 
   findById(id) {
+    try {
+      if (typeof id === "string") {
+        id = new ObjectID(id);
+      }
+    } catch (err) {
+      throw err;
+    }
     return this.findOne({_id: id});
   }
 }

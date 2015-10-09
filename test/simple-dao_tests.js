@@ -133,7 +133,17 @@ describe("SimpleDao", function () {
 
     describe(".findById(id)", function () {
 
-      it("should get a single object for that id", function (done) {
+      it("should get a single object for the passed objectId", function (done) {
+        let dmr = new DataMapResult("1");
+        dmr.accountId = "account-id";
+        simpleDao.save(dmr).then(function (saved) {
+          let promise = simpleDao.for(DataMapResult).findById(saved._id);
+          expect(promise).to.be.fulfilled;
+          expect(promise).to.eventually.be.instanceOf(DataMapResult).and.notify(done);
+        });
+      });
+
+      it("should get a single object for the passed string id", function (done) {
         let dmr = new DataMapResult("1");
         dmr.accountId = "account-id";
         simpleDao.save(dmr).then(function (saved) {
@@ -144,7 +154,7 @@ describe("SimpleDao", function () {
       });
 
       it("should return null if can't find it", function (done) {
-        let promise = simpleDao.for(DataMapResult).findById(chance.hash());
+        let promise = simpleDao.for(DataMapResult).findById(new ObjectID());
         expect(promise).to.be.fulfilled;
         expect(promise).to.eventually.be.null.and.notify(done);
       });
@@ -164,7 +174,7 @@ describe("SimpleDao", function () {
       });
 
       it("should return null if can't find it", function (done) {
-        let promise = simpleDao.for(DataMapResult).findOne({accountId: chance.hash()});
+        let promise = simpleDao.for(DataMapResult).findOne({accountId: new ObjectID().toString()});
         expect(promise).to.be.fulfilled;
         expect(promise).to.eventually.be.null.and.notify(done);
       });

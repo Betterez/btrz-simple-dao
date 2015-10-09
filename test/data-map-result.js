@@ -1,12 +1,12 @@
 "use strict";
-let uuid = require("uuid");
+let ObjectID = require("mongodb").ObjectID;
 
 class DataMapResult {
   constructor (dataMapId) {
     if (!dataMapId) {
       throw new Error("DataMapResult needs a dataMapId");
     }
-    this._id = uuid.v1();
+    this._id = new ObjectID();
     this.dataMapId = dataMapId;
     this.status = "pending";
     this.errors = [];
