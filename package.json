@@ -4,7 +4,7 @@
   "description": "Betterez Simple DAO",
   "main": "index.js",
   "scripts": {
-    "test": "NODE_ENV=test multi='xunit=test-results/xunit.xml spec=-' node_modules/istanbul-harmony/lib/cli.js cover node_modules/mocha/bin/_mocha -- --ui bdd -R mocha-multi -t 5000",
+    "test": "NODE_ENV=test multi='xunit=test-results/xunit.xml spec=-' node_modules/istanbul/lib/cli.js cover node_modules/mocha/bin/_mocha -- --ui bdd -R mocha-multi -t 5000",
     "test-w": "NODE_ENV=test node_modules/mocha/bin/mocha -w"
   },
   "repository": {
@@ -17,18 +17,15 @@
     "Promises",
     "io.js"
   ],
+  "license": "MIT",
   "author": {
     "name": "hgarcia",
     "email": "hernan@dynamicprogrammer.com"
   },
-  "contributors": [{
-    "name": "pbrudnick",
-    "email": "pbrudnick@gmail.com"
-  }],
-  "licenses": [
+  "contributors": [
     {
-      "type": "MIT",
-      "url": "https://github.com/Betterez/btrz-simple-dao/blob/master/LICENSE"
+      "name": "pbrudnick",
+      "email": "pbrudnick@gmail.com"
     }
   ],
   "bugs": {
@@ -36,19 +33,20 @@
   },
   "homepage": "https://github.com/Betterez/btrz-simple-dao",
   "dependencies": {
-    "lodash": "^2.4.1",
+    "lodash": "^3.10.1",
     "mongodb": "^2.0.39",
     "promised-mongo": "^0.11.1"
   },
   "devDependencies": {
     "chai": "^3.0.0",
     "chai-as-promised": "^5.1.0",
-    "istanbul-harmony": "latest",
-    "mocha": "latest",
     "chance": "0.7.1",
+    "istanbul": "^0.4.1",
+    "mocha": "latest",
     "mocha-multi": "latest",
+    "publish": "^0.5.0",
     "sinon": "latest",
-    "xunit-file": "latest",
-    "uuid": "^2.0.1"
+    "uuid": "^2.0.1",
+    "xunit-file": "latest"
   }
 }
