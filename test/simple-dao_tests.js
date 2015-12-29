@@ -293,7 +293,6 @@ describe("SimpleDao", function () {
           promise.then(function (updatedDocument) {
             expect(updatedDocument.ok).to.be.ok;
             expect(updatedDocument.n).to.be.eql(0);
-            expect(updatedDocument.updatedExisting).to.be.ok;
             done();
           }).catch(function (err) { done(err);});
         });
