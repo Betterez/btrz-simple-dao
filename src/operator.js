@@ -4,7 +4,7 @@ let InnerCursor =  require("./inner-cursor").InnerCursor,
   ObjectID = require("mongodb").ObjectID,
   utils = require("./utils");
 
-class Finder {
+class Operator {
   constructor(collection, factory) {
     this.collection = collection;
     this.factory = factory;
@@ -37,6 +37,20 @@ class Finder {
     }
     return this.findOne({_id: id});
   }
+
+  update(query, update, options) {
+    if (!query) {
+      throw new Error("query can't be undefined or null");
+    }
+    if (!update) {
+      throw new Error("update can't be undefined or null");
+    }
+
+    if (!options) {
+      return this.collection.update(query, update);
+    }
+    return this.collection.update(query, update, options);
+  }
 }
 
-exports.Finder = Finder;
+exports.Operator = Operator;

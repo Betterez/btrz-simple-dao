@@ -3,7 +3,7 @@
 let pmongo = require("promised-mongo"),
   MongoClient = require("mongodb").MongoClient,
   ObjectID = require("mongodb").ObjectID,
-  Finder = require("./finder").Finder;
+  Operator = require("./operator").Operator;
 
 function connectionString(dbConfig) {
   var uris = dbConfig.uris.join(",");
@@ -65,7 +65,7 @@ class SimpleDao {
     }
     let collectionName = getCollectionName(ctrFunc);
     let collection = this.db.collection(collectionName);
-    return new Finder(collection, ctrFunc.factory);
+    return new Operator(collection, ctrFunc.factory);
   }
 
   save(model) {

@@ -232,6 +232,73 @@ describe("SimpleDao", function () {
         });
       });
     });
+
+    describe(".update(query, update, options)", function () {
+
+      it("should throw if there is no query", function () {
+        function sut() {
+          simpleDao.for(DataMapResult).update();
+        }
+        expect(sut).to.throw("query can't be undefined or null");
+      });
+
+      it("should throw if there is no update param", function () {
+        function sut() {
+          simpleDao.for(DataMapResult).update({});
+        }
+        expect(sut).to.throw("update can't be undefined or null");
+      });
+
+      it("should update a single object given a query and update param", function (done) {
+        let dmr = new DataMapResult("1");
+        dmr.accountId = "account-id";
+        dmr.status = "new";
+        simpleDao.save(dmr).then(function () {
+          let promise = simpleDao.for(DataMapResult).update({accountId: "account-id"}, {$set: {status: "old"}});
+          promise.then(function (updatedDocument) {
+            expect(updatedDocument.ok).to.be.true;
+            expect(updatedDocument.n).to.be.eql(1);
+            expect(updatedDocument.updatedExisting).to.be.true;
+            done();
+          }).catch(function (err) { done(err);});
+        });
+      });
+
+      it("should update a single object given a query, update param and options", function (done) {
+        let dmr = new DataMapResult("45");
+        dmr.accountId = "account-id-123";
+        dmr.status = "new";
+        simpleDao.save(dmr).then(function () {
+          dmr = new DataMapResult("52");
+          dmr.accountId = "account-id-123";
+          dmr.status = "new";
+          simpleDao.save(dmr).then(function () {
+            let promise = simpleDao.for(DataMapResult).update({accountId: "account-id-123"}, {$set: {status: "old"}}, {multi: true});
+            promise.then(function (updatedDocument) {
+              expect(updatedDocument.ok).to.be.true;
+              expect(updatedDocument.n).to.be.eql(2);
+              expect(updatedDocument.updatedExisting).to.be.true;
+              done();
+            }).catch(function (err) { done(err);});
+          });
+        });
+      });
+
+      it("should return not updates if query not match", function (done) {
+        let dmr = new DataMapResult("1");
+        dmr.accountId = "account-id";
+        dmr.status = "new";
+        simpleDao.save(dmr).then(function () {
+          let promise = simpleDao.for(DataMapResult).update({accountId: "not-existing"}, {status: "old"});
+          promise.then(function (updatedDocument) {
+            expect(updatedDocument.ok).to.be.true;
+            expect(updatedDocument.n).to.be.eql(0);
+            expect(updatedDocument.updatedExisting).to.be.true;
+            done();
+          }).catch(function (err) { done(err);});
+        });
+      });
+    });
   });
 
   describe("save(model)", function () {
@@ -282,6 +349,6 @@ describe("SimpleDao", function () {
   });
 
   after(function () {
-    // simpleDao.db.dropCollection("datamapresult").done();
+    simpleDao.db.dropCollection("datamapresult").done();
   });
 });
