@@ -66,11 +66,11 @@ The `config` argument is expected to have the form.
 
 ### .for(Model)
 
-Returns an instance of a `Finder` that will map results to instances of the `Model`
+Returns an instance of a `Operator` that will map results to instances of the `Model`
 The `Model` class is expected to have an static `factory` method.
-The `Model` class can have an static `collectioName` method that the `Finder` will use to query the collection if the `collectionName` is not found it will use the name of the class (object) in lower case as the name of the collection.
+The `Model` class can have an static `collectioName` method that the `Operator` will use to query the collection if the `collectionName` is not found it will use the name of the class (object) in lower case as the name of the collection.
 
-    let finder = simpleDao.for(Account);
+    let operator = simpleDao.for(Account);
     //this will query a collection with the name "account"
 
 If we want to use a different name, we can create a model with the `collectionName` static function
@@ -89,7 +89,7 @@ If we want to use a different name, we can create a model with the `collectionNa
       }
     }
 
-    let finder = simpleDao.for(User);
+    let operator = simpleDao.for(User);
     //In this case it will query a collection with the name "people";
 
 ### .aggregate(collectionName, pipeline)
@@ -150,34 +150,41 @@ It takes an optional parameter that should be a valid 24 characters id.
 
 Is a property that will return the connection string the object is using to connect to Mongo.
 
-### new Finder() //Private
+### new Operator() //Private
 
-The finder is a private object that is accessed via the `.for` method factory on a SimpleDao instance.
+The Operator is a private object that is accessed via the `.for` method factory on a SimpleDao instance.
 
 ### .find(query, options)
 
-It will perform a `find` on the collection that the finder have been created for (see above on the `for` method to understand how the collection name is set) with the given `query` and `options`.
+It will perform a `find` on the collection that the operator have been created for (see above on the `for` method to understand how the collection name is set) with the given `query` and `options`.
 The query and options are the same as with the node mongodb driver find method.
 
     let innerCursor = simpleDao.for(Account).find({}); //Returns an inner cursor with all documents in the account collection.
 
 ### .findOne(query)
 
-It will perform a `findOne` on the collection that the finder have been created for (see above on the `for` method to understand how the collection name is set) with the given `query`.
+It will perform a `findOne` on the collection that the operator have been created for (see above on the `for` method to understand how the collection name is set) with the given `query`.
 
     simpleDao.for(Account).findOne({name: "new account"}); //Returns a promise that will resolve to the document or null (if it can't find one).
 
 ### .findById(id)
 
-It will perform a `findOne` on the collection that the finder have been created for (see above on the `for` method to understand how the collection name is set) with the query {_id: id}.
+It will perform a `findOne` on the collection that the operator have been created for (see above on the `for` method to understand how the collection name is set) with the query {_id: id}.
 
     simpleDao.for(Account).findById(SimpleDao.objectId("55b27c2a74757b3c5e121b0e")); //Returns a promise that will resolve to the document or null (if it can't find one).
 
 You can pass anything to the id not just ObjectID, it will depend on what do you use to generate the `_id` in the mongo collections.
 
+### .update(query, update, options)
+
+It will perform an `update` on the collection that the operator have been created for (see above on the `for` method to understand how the collection name is set) with the given `query`, applying the `update` and `options`.
+The query, update and options are the same as with the node mongodb driver update method.
+
+    simpleDao.for(Account).update({name: "new account"}, { $set: {name: "Peter account"}}); //Returns a promise with the result report than the node mongodb driver.
+
 ### new innerCursor() //Private
 
-The innerCursor is a private object that is accessed via the `.find` method factory on an instance of the Finder.
+The innerCursor is a private object that is accessed via the `.find` method factory on an instance of the Operator.
 It contains only 2 methods
 
 ### .toArray()
