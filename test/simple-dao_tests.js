@@ -256,9 +256,9 @@ describe("SimpleDao", function () {
         simpleDao.save(dmr).then(function () {
           let promise = simpleDao.for(DataMapResult).update({accountId: "account-id"}, {$set: {status: "old"}});
           promise.then(function (updatedDocument) {
-            expect(updatedDocument.ok).to.be.true;
+            expect(updatedDocument.ok).to.be.ok;
             expect(updatedDocument.n).to.be.eql(1);
-            expect(updatedDocument.updatedExisting).to.be.true;
+            expect(updatedDocument.updatedExisting).to.be.ok;
             done();
           }).catch(function (err) { done(err);});
         });
@@ -275,9 +275,9 @@ describe("SimpleDao", function () {
           simpleDao.save(dmr).then(function () {
             let promise = simpleDao.for(DataMapResult).update({accountId: "account-id-123"}, {$set: {status: "old"}}, {multi: true});
             promise.then(function (updatedDocument) {
-              expect(updatedDocument.ok).to.be.true;
+              expect(updatedDocument.ok).to.be.ok;
               expect(updatedDocument.n).to.be.eql(2);
-              expect(updatedDocument.updatedExisting).to.be.true;
+              expect(updatedDocument.updatedExisting).to.be.ok;
               done();
             }).catch(function (err) { done(err);});
           });
@@ -291,9 +291,9 @@ describe("SimpleDao", function () {
         simpleDao.save(dmr).then(function () {
           let promise = simpleDao.for(DataMapResult).update({accountId: "not-existing"}, {status: "old"});
           promise.then(function (updatedDocument) {
-            expect(updatedDocument.ok).to.be.true;
+            expect(updatedDocument.ok).to.be.ok;
             expect(updatedDocument.n).to.be.eql(0);
-            expect(updatedDocument.updatedExisting).to.be.true;
+            expect(updatedDocument.updatedExisting).to.be.ok;
             done();
           }).catch(function (err) { done(err);});
         });
@@ -348,7 +348,12 @@ describe("SimpleDao", function () {
     });
   });
 
-  after(function () {
-    simpleDao.db.dropCollection("datamapresult").done();
+  after(function (done) {
+    simpleDao.db.dropCollection("datamapresult")
+      .then(function () {
+        done();
+      }).catch(function (err) {
+        done(err);
+      });
   });
 });
