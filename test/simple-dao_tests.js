@@ -158,7 +158,6 @@ describe("SimpleDao", function () {
         expect(promise).to.be.fulfilled;
         expect(promise).to.eventually.be.null.and.notify(done);
       });
-
     });
 
     describe(".findOne(query)", function () {
@@ -298,6 +297,34 @@ describe("SimpleDao", function () {
         });
       });
     });
+
+    describe(".removeById(id)", function () {
+
+      it("should remove a single object for the passed objectId", function (done) {
+        let dmr = new DataMapResult("1");
+        simpleDao.save(dmr).then(function (saved) {
+          let promise = simpleDao.for(DataMapResult).removeById(saved._id);
+          expect(promise).to.be.fulfilled;
+          expect(promise).to.eventually.deep.equal({n: 1}).and.notify(done);
+        });
+      });
+
+      it("should remove a single object for the passed string id", function (done) {
+        let dmr = new DataMapResult("1");
+        simpleDao.save(dmr).then(function (saved) {
+          let promise = simpleDao.for(DataMapResult).removeById(saved._id.toString());
+          expect(promise).to.be.fulfilled;
+          expect(promise).to.eventually.deep.equal({n: 1}).and.notify(done);
+        });
+      });
+
+      it("should return 0 count if can't find it", function (done) {
+        let promise = simpleDao.for(DataMapResult).removeById(new ObjectID());
+        expect(promise).to.be.fulfilled;
+          expect(promise).to.eventually.deep.equal({n: 0}).and.notify(done);
+      });
+    });
+
   });
 
   describe("save(model)", function () {

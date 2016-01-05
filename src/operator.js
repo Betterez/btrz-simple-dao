@@ -51,6 +51,13 @@ class Operator {
     }
     return this.collection.update(query, update, options);
   }
+
+  removeById(id, options) {
+    if (typeof id === "string") {
+      id = new ObjectID(id);
+    }
+    return this.collection.remove({_id: id}, options);
+  }
 }
 
 exports.Operator = Operator;
