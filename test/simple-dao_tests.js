@@ -296,21 +296,14 @@ describe("SimpleDao", function () {
       });
     });
 
-    describe.only(".removeById(id)", function () {
+    describe(".removeById(id)", function () {
 
       it("should remove a single object for the passed objectId", function (done) {
         let dmr = new DataMapResult("1");
         simpleDao.save(dmr).then(function (saved) {
-          // let promise =
-          simpleDao.for(DataMapResult).removeById(saved._id).then(function (result) {
-            console.log("RESULT:", result);
-            done();
-          }).catch(function (err) {
-            console.log("ERR:", err);
-            done();
-          });
-          // expect(promise).to.be.fulfilled;
-          // expect(promise).to.eventually.deep.equal({n: 1}).and.notify(done);
+          let promise = simpleDao.for(DataMapResult).removeById(saved._id);
+          expect(promise).to.be.fulfilled;
+          expect(promise).to.eventually.deep.equal({n: 1}).and.notify(done);
         });
       });
 
