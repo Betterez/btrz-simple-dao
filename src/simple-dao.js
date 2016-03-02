@@ -33,6 +33,13 @@ class SimpleDao {
   constructor(options, _mongoDriver_) {
     this.connectionString = connectionString(options.db);
     this.db = _mongoDriver_ || pmongo(this.connectionString);
+    if (this.db.on) {
+      this.db.on("error", function (err) {
+        if (err.message.indexOf("failed to connect to") === -1) {
+          throw err;
+        }
+      });
+    }
   }
 
   objectId(id) {

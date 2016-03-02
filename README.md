@@ -8,6 +8,7 @@ io.js >= v2.0.1
 
 ## Change log
 
+  * 1.6.2 - Handle disconnect gracefully and reconnects if server comes back on a timely manner.
   * 1.3.0 - Adding static and instance methods objectId() and objectId(id) to return an instance of an ObjectID object
           - Improve documentation in the README
 
