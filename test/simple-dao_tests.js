@@ -323,6 +323,66 @@ describe("SimpleDao", function () {
       });
     });
 
+    describe(".distinct(field, query)", function () {
+
+      beforeEach(function (done){
+        let dmr = new DataMapResult("1");
+        dmr.field = "A";
+        dmr.accountId = "1";
+        simpleDao.save(dmr).then(function () {
+          let dmr2 = new DataMapResult("2");
+          dmr2.field = "B";
+          dmr2.accountId = "1";
+          simpleDao.save(dmr2).then(function () {
+            let dmr3 = new DataMapResult("3");
+            dmr3.field = "A";
+            dmr3.accountId = "1";
+            simpleDao.save(dmr3).then(function () {
+              let dmr4 = new DataMapResult("4");
+              dmr4.field = "C";
+              dmr4.accountId = "2";
+              simpleDao.save(dmr4).then(function () {
+                done();
+              });
+            });
+          });
+        });
+      });
+
+      it("should not return values", function (done) {
+        let promise = simpleDao.for(DataMapResult).distinct();
+        promise.then(function (results) {
+          expect(results).to.be.an("array");
+          expect(results.length).to.be.eql(0);
+          done();
+        }).catch(function (err) { done(err);});
+      });
+
+      it("should return the distinct values for field with no query", function (done) {
+        let promise = simpleDao.for(DataMapResult).distinct("field");
+        promise.then(function (results) {
+          expect(results).to.be.an("array");
+          expect(results.length).to.be.eql(3);
+          expect(results[0]).to.be.eql("A");
+          expect(results[1]).to.be.eql("B");
+          expect(results[2]).to.be.eql("C");
+          done();
+        }).catch(function (err) { done(err);});
+      });
+
+      it("should return the distinct values for the field with the given query", function (done) {
+        let query = {accountId: "1"};
+        let promise = simpleDao.for(DataMapResult).distinct("field", query);
+        promise.then(function (results) {
+          expect(results).to.be.an("array");
+          expect(results.length).to.be.eql(2);
+          expect(results[0]).to.be.eql("A");
+          expect(results[1]).to.be.eql("B");
+          done();
+        }).catch(function (err) { done(err);});
+      });
+    });
+
   });
 
   describe("save(model)", function () {

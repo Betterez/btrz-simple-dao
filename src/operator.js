@@ -58,6 +58,10 @@ class Operator {
     }
     return this.collection.remove({_id: id}, options);
   }
+
+  distinct(field, query){
+    return this.collection.distinct(field || "", query || {});
+  }
 }
 
 exports.Operator = Operator;

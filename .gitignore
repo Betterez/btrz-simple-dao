@@ -9,5 +9,5 @@ pids
 
 releaseNotes.txt
 /test-results
-
+.idea
 node_modules
