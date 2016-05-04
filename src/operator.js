@@ -23,6 +23,27 @@ class Operator {
     this.factory = factory;
   }
 
+  count(query) {
+    return this
+      .simpleDao
+      .connect()
+      .then((db) => {
+        return db
+          .collection(this.collectionName)
+          .count(query)
+          .then((result) => {
+            return result;
+          })
+          .catch((err) => {
+            throw err;
+          });
+      })
+      .catch((err) => {
+        this.simpleDao.logError("operator count connect", err);
+        throw err;
+      });
+  }
+
   find(query, options) {
     let cursor = this
         .simpleDao

@@ -138,6 +138,33 @@ describe("SimpleDao", function () {
           });
     });
 
+    describe(".count(query)", function () {
+      it("should get the count from the collection", function (done) {
+        let dmr = new DataMapResult("1");
+        dmr.accountId = "account-id";
+        simpleDao.save(dmr)
+          .then(function () {
+            let query = {accountId: "account-id"};
+            let promise = simpleDao.for(DataMapResult).count(query);
+            expect(promise).to.be.fulfilled;
+            expect(promise).to.eventually.be.eql(1).and.notify(done);
+        });
+      });
+    });
+
+    describe(".dropCollection(collectionName)", function () {
+      it("should drop the collection", function (done) {
+        let dmr = new DataMapResult("1");
+        dmr.accountId = "account-id";
+        simpleDao.save(dmr)
+          .then(function () {
+            let promise = simpleDao.dropCollection("datamapresult");
+            expect(promise).to.be.fulfilled;
+            expect(promise).to.eventually.be.eql(true).and.notify(done);
+        });
+      });
+    });
+
     describe(".findById(id)", function () {
 
       it("should get a single object for the passed objectId", function (done) {
@@ -445,16 +472,11 @@ describe("SimpleDao", function () {
   });
 
   after(function (done) {
-    simpleDao.connect()
-      .then((db) => {
-        db.dropCollection("datamapresult")
-          .then(function () {
-            done();
-          }).catch(function (err) {
-            done(err);
-          });
-      })
-      .catch((err) => {
+    simpleDao
+      .dropCollection("datamapresult")
+      .then(function () {
+        done();
+      }).catch(function (err) {
         done(err);
       });
   });

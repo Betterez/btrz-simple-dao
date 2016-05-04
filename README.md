@@ -9,6 +9,9 @@ io.js >= v2.0.1
 
 ## Change log
 
+  * 2.1.0 - Added .count() method to return a count.
+          - Added .dropCollection() method
+
   * 2.0.0 - Removed dependency on promised-mongo,
           - Modified the API: toCursor() now also returns a promise.
           - Catch disconnect events and will reconnect automatically in the net request that can find an available connection.
@@ -148,6 +151,10 @@ The aggregate method will use the following options when calling the database.
 It will save the model into a collection for that model (see above on the `for` method to understand how the collection name is set).
 There is no serialization strategy at the moment so "all" public methods and properties will be saved into the database.
 
+### .dropCollection(name)
+
+It will drop the collection from the database.
+
 ### .objectId()
 
 There are an static and an instance version of the method for convenience.
@@ -171,6 +178,13 @@ Is a property that will return the connection string the object is using to conn
 ### new Operator() //Private
 
 The Operator is a private object that is accessed via the `.for` method factory on a SimpleDao instance.
+
+### .count(query)
+
+It will perform a `.count` on the collection that the operator have been created for (see above on the `for` method to understand how the collection name is set) with the given `query`.
+If the query is not provided it will default to a count on the complete collection.
+
+    simpleDao.for(Account).count({name: "new account"}); //Returns a promise that will resolve to the count of documents matching the query.
 
 ### .find(query, options)
 

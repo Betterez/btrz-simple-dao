@@ -77,6 +77,18 @@ class SimpleDao {
       });
   }
 
+  dropCollection(collectionName) {
+    return this
+      .connect()
+      .then((db) => {
+        return db.dropCollection(collectionName);
+      })
+      .catch((err) => {
+        this.logError("dropCollection error connect", err);
+        throw err;
+      });
+  }
+
   objectId(id) {
     return SimpleDao.objectId(id);
   }
@@ -116,25 +128,25 @@ class SimpleDao {
     let collectionName = getCollectionName(model.constructor);
     return this
       .connect()
-        .then((db) => {
-          return db
-            .collection(collectionName)
-            .save(model)
-            .then((result) => {
-              if (!model._id) {
-                model._id = result.result.upserted[0]._id;
-              }
-              return model;
-            })
-            .catch((err) => {
-              this.logError("saving error", err);
-              throw err;
-            });
-        })
-        .catch((err) => {
-          this.logError("save error", err);
-          throw err;
-        });
+      .then((db) => {
+        return db
+          .collection(collectionName)
+          .save(model)
+          .then((result) => {
+            if (!model._id) {
+              model._id = result.result.upserted[0]._id;
+            }
+            return model;
+          })
+          .catch((err) => {
+            this.logError("saving error", err);
+            throw err;
+          });
+      })
+      .catch((err) => {
+        this.logError("save error", err);
+        throw err;
+      });
   }
 }
 
