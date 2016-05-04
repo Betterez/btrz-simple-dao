@@ -10,9 +10,14 @@ class InnerCursor {
   toCursor() {
     return this.cursor;
   }
-
   toArray() {
-    return this.cursor.toArray().then(utils.mapFor(this.factory));
+    return this.cursor
+      .then((c) => {
+        return c.toArray().then(utils.mapFor(this.factory));
+      })
+      .catch((err) => {
+        throw err;
+      });
   }
 }
 

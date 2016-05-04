@@ -1,7 +1,6 @@
 "use strict";
 
-let pmongo = require("promised-mongo"),
-  MongoClient = require("mongodb").MongoClient,
+let MongoClient = require("mongodb").MongoClient,
   ObjectID = require("mongodb").ObjectID,
   Operator = require("./operator").Operator;
 
@@ -30,16 +29,52 @@ class SimpleDao {
     return new ObjectID();
   }
 
-  constructor(options, _mongoDriver_) {
+  constructor(options, logger) {
     this.connectionString = connectionString(options.db);
-    this.db = _mongoDriver_ || pmongo(this.connectionString);
-    if (this.db.on) {
-      this.db.on("error", function (err) {
-        if (err.message.indexOf("failed to connect to") === -1) {
-          throw err;
-        }
-      });
+    this.logger = logger;
+  }
+
+  logError(msg, err) {
+    if (this.logger) {
+      this.logger.error(msg, err);
     }
+  }
+
+  logInfo(msg) {
+    if (this.logger) {
+      this.logger.info(msg);
+    }
+  }
+
+  connect() {
+    var self = this;
+    if (!this.db) {
+      this.logInfo("connecting");
+      this.db = MongoClient.connect(`mongodb://${this.connectionString}`);
+    }
+    return this.db
+      .then((db) => {
+        db.on("close", function (err) {
+          self.db = null;
+          self.logError("connect on close", err);
+        });
+        return db;
+      })
+      .catch(function (err) {
+        self.db = null;
+        self.logError("connect() promise error", err);
+        throw err;
+      });
+  }
+
+  collectionNames(cb) {
+    this.connect()
+      .then((db) => {
+        db.collection("btrz_connected").find({}).toArray(cb);
+      })
+      .catch((err) => {
+        cb(err, null);
+      });
   }
 
   objectId(id) {
@@ -71,8 +106,7 @@ class SimpleDao {
       throw new Error("The Ctr provided needs to have a factory function");
     }
     let collectionName = getCollectionName(ctrFunc);
-    let collection = this.db.collection(collectionName);
-    return new Operator(collection, ctrFunc.factory);
+    return new Operator(this, collectionName, ctrFunc.factory);
   }
 
   save(model) {
@@ -80,7 +114,27 @@ class SimpleDao {
       throw new Error("model can't be undefined or null");
     }
     let collectionName = getCollectionName(model.constructor);
-    return this.db.collection(collectionName).save(model);
+    return this
+      .connect()
+        .then((db) => {
+          return db
+            .collection(collectionName)
+            .save(model)
+            .then((result) => {
+              if (!model._id) {
+                model._id = result.result.upserted[0]._id;
+              }
+              return model;
+            })
+            .catch((err) => {
+              this.logError("saving error", err);
+              throw err;
+            });
+        })
+        .catch((err) => {
+          this.logError("save error", err);
+          throw err;
+        });
   }
 }
 

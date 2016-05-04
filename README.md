@@ -4,9 +4,15 @@
 
 ## Engines
 
+node >= v4.2.0 (for version 2 and up)
 io.js >= v2.0.1
 
 ## Change log
+
+  * 2.0.0 - Removed dependency on promised-mongo,
+          - Modified the API: toCursor() now also returns a promise.
+          - Catch disconnect events and will reconnect automatically in the net request that can find an available connection.
+          - Added a logger as a second constructor parameter (it should implement both an `info` and an `error` methods)
 
   * 1.6.2 - Handle disconnect gracefully and reconnects if server comes back on a timely manner.
   * 1.3.0 - Adding static and instance methods objectId() and objectId(id) to return an instance of an ObjectID object
@@ -37,19 +43,30 @@ If you are working in a promise based solution you can just return.
       .find({})
       .toArray();
 
-Or if you much rather use a stream.
+Or if you much rather use a stream (changed API on 2.0 toCursor returns a promise as well)
 
     simpleDao
       .for(Account)
       .find({})
       .toCursor()
-      .on("data", function (datum) {
-        // do work
+      .then((cursor) => {
+        cursor.on("data", function (datum) {
+          // do work
+        })
+        .on("end", function () {
+          //we are done
+        })
+        .on("error", function (err) {
+          //we crashed
+        });
       });
 
 ## Api
 
-### new SimpleDao(config)
+### new SimpleDao(config, logger)
+
+Changed in v2.0 we added the logger non mandatory parameter.
+Logger is expected to implement the `.info` and `.error` methods.
 
 Creates a new instance of a simple dao.
 The `config` argument is expected to have the form.
