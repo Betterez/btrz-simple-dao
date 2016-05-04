@@ -78,6 +78,31 @@ describe("SimpleDao", function () {
       expect(simpleDao.connectionString).to.be.eql("usr:pwd@127.0.0.1:27017/simple_dao_test");
     });
 
+    it.skip("should not register so many listernes", (done) => {
+      simpleDao = new SimpleDao(config);
+      simpleDao.connect();
+      simpleDao.connect();
+      simpleDao.connect();
+      simpleDao.connect();
+      simpleDao.connect();
+      simpleDao.connect();
+      simpleDao.connect();
+      simpleDao.connect();
+      simpleDao.connect();
+      simpleDao.connect();
+      simpleDao.connect();
+      simpleDao.connect();
+      simpleDao.connect();
+      simpleDao.connect();
+      simpleDao.connect();
+      simpleDao.connect();
+      simpleDao.connect();
+      simpleDao.connect();
+      simpleDao.connect();
+      simpleDao.connect();
+      // done();
+    });
+
     it("should generate a connection-string for many db servers no username/password", function () {
       let config = {
         db: {

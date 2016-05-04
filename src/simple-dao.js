@@ -50,21 +50,22 @@ class SimpleDao {
     var self = this;
     if (!this.db) {
       this.logInfo("connecting");
-      this.db = MongoClient.connect(`mongodb://${this.connectionString}`);
-    }
-    return this.db
-      .then((db) => {
-        db.on("close", function (err) {
+      this.db = MongoClient.connect(`mongodb://${this.connectionString}`)
+        .then((db) => {
+          console.log("adding listener");
+          db.on("close", function (err) {
+            self.db = null;
+            self.logError("connect on close", err);
+          });
+          return db;
+        })
+        .catch(function (err) {
           self.db = null;
-          self.logError("connect on close", err);
+          self.logError("connect() promise error", err);
+          throw err;
         });
-        return db;
-      })
-      .catch(function (err) {
-        self.db = null;
-        self.logError("connect() promise error", err);
-        throw err;
-      });
+    }
+    return this.db;
   }
 
   collectionNames(cb) {

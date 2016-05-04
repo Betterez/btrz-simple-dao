@@ -9,6 +9,8 @@ io.js >= v2.0.1
 
 ## Change log
 
+  * 2.1.1 - Fixing a memory leak since we were re-adding the listener to the on("error") of the db for each operation. If you are using 2.0.0 or 2.1.0 update now.
+  
   * 2.1.0 - Added .count() method to return a count.
           - Added .dropCollection() method
 
