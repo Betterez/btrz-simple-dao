@@ -287,6 +287,29 @@ describe("SimpleDao", function () {
       });
     });
 
+    describe("(operator).findAggregate(query)", function () {
+      it("should call aggregate on the dao, passing the arguments and returning a cursor", function (done) {
+        let dmr = new DataMapResult("1");
+        dmr.accountId = "account-id";
+        simpleDao.save(dmr).then(function () {
+          let query = [
+            {$match: {accountId: "account-id"}},
+            {$group: { _id: "$accountId", totalPop: { $sum: "$dataMapId" } } }
+          ];
+          simpleDao.for(DataMapResult)
+            .findAggregate(query)
+            .toCursor()
+            .then((cursor) => {
+            expect(cursor.next).to.be.a("function");
+          done();
+        })
+          .catch((err) => {
+            done(err);
+        });
+        });
+      });
+    });
+
     describe(".aggregate(collectionName, query)", function () {
 
       it("should return a promise with a cursor", function (done) {

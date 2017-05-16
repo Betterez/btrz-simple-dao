@@ -59,6 +59,11 @@ class Operator {
     return new InnerCursor(cursor, this.factory);
   }
 
+  findAggregate(query) {
+    let cursorPromised = this.simpleDao.aggregate(this.collectionName, query);
+    return new InnerCursor(cursorPromised, this.factory);
+  }
+
   findOne(query) {
     let factory = this.factory;
     return this
