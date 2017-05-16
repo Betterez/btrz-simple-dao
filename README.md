@@ -8,7 +8,10 @@ node >= v4.2.0 (for version 2 and up)
 io.js >= v2.0.1
 
 ## Change log
-
+  * 2.2.1 - Updated docs.
+  
+  * 2.2.0 - Added new method findAggregate on Operator to be used similar to existing find method.
+  
   * 2.1.1 - Fixing a memory leak since we were re-adding the listener to the on("error") of the db for each operation. If you are using 2.0.0 or 2.1.0 update now.
   
   * 2.1.0 - Added .count() method to return a count.
@@ -208,6 +211,12 @@ It will perform a `findOne` on the collection that the operator have been create
     simpleDao.for(Account).findById(SimpleDao.objectId("55b27c2a74757b3c5e121b0e")); //Returns a promise that will resolve to the document or null (if it can't find one).
 
 You can pass anything to the id not just ObjectID, it will depend on what do you use to generate the `_id` in the mongo collections.
+
+### .findAggregate(pipeline)
+
+An alternative to the `aggregate` method on SimpleDao, but is meant to be used with `for` method (see above). Same options of `aggregate` applies.
+
+    let innerCursor = simpleDao.for(Account).findAggregate([{"$match": {...}}, {"$unwind": {...}}, ...]); //Returns an inner cursor with all the aggregates for the account collection.
 
 ### .update(query, update, options)
 
