@@ -33,7 +33,7 @@
   },
   "homepage": "https://github.com/Betterez/btrz-simple-dao",
   "dependencies": {
-    "mongodb": "2.1.18"
+    "mongodb": "2.2.27"
   },
   "devDependencies": {
     "chai": "^3.0.0",
