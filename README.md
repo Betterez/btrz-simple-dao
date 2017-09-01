@@ -4,10 +4,10 @@
 
 ## Engines
 
-node >= v4.2.0 (for version 2 and up)
-io.js >= v2.0.1
+node >= v6.11.1
 
 ## Change log
+  * 2.4.0 - Upgrade node to v6.11.1 and mock-simple-dao added.
   * 2.2.1 - Updated docs.
   
   * 2.2.0 - Added new method findAggregate on Operator to be used similar to existing find method.
