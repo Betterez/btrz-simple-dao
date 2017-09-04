@@ -242,7 +242,7 @@ It will return a streaming cursor with the results.
 It is a mock for testing simple-dao that supports all the simple-dao operations.
 Currently, for find and findAggregate `toCursor()` is not available.
 ### how to use
-You can pass a source object explicitying the expected result for each operation.
+You can pass a source object specifying the expected result for each operation.
 
     const mockSimpleDao = require("btrz-simple-dao").mockSimpleDao;`
 
@@ -250,7 +250,7 @@ You can pass a source object explicitying the expected result for each operation
       find: [data],
       update: {}
     };
-    mockDao = mockSimpleDao(source);`
+    mockDao = mockSimpleDao(source);
 
-    mockDao.find().toArray;
+    mockDao.find().toArray();
     //  [data]
