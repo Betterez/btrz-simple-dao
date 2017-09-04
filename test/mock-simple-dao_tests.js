@@ -62,7 +62,7 @@ describe("Mock SimpleDao", function () {
   })
 
   it("should return the find result", (done) => {
-    return mockDao(source).for().find()
+    return mockDao(source).for().find().toArray()
       .then((result) => {
         expect(result).to.be.eql(source.find);
         done();
@@ -70,7 +70,7 @@ describe("Mock SimpleDao", function () {
   });
 
   it("should return the default find result", (done) => {
-    return mockDao().for().find()
+    return mockDao().for().find().toArray()
       .then((result) => {
         expect(result).to.be.eql([]);
         done();
@@ -144,7 +144,7 @@ describe("Mock SimpleDao", function () {
   });
 
   it("should return the findAggregate result", (done) => {
-    return mockDao(source).for().findAggregate()
+    return mockDao(source).for().findAggregate().toArray()
       .then((result) => {
         expect(result).to.be.eql(source.findAggregate);
         done();
