@@ -1,6 +1,6 @@
 {
   "name": "btrz-simple-dao",
-  "version": "2.4.3",
+  "version": "2.4.4",
   "description": "Betterez Simple DAO",
   "main": "index.js",
   "scripts": {
@@ -33,7 +33,7 @@
   },
   "homepage": "https://github.com/Betterez/btrz-simple-dao",
   "dependencies": {
-    "mongodb": "2.2.27"
+    "mongodb": "2.1.8"
   },
   "devDependencies": {
     "chai": "^3.0.0",
