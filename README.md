@@ -1,13 +1,15 @@
-# btrz-simple-dao [![Build Status](https://secure.travis-ci.org/Betterez/btrz-simple-dao.png?branch=master)](https://travis-ci.org/Betterez/btrz-simple-dao) [![NPM version](https://badge-me.herokuapp.com/api/npm/btrz-simple-dao.png)](http://badges.enytc.com/for/npm/btrz-simple-dao)
+# btrz-simple-dao [![npm version](https://badge.fury.io/js/btrz-simple-dao.svg)](https://badge.fury.io/js/btrz-simple-dao)
 
 **Very simple** DAO for MongoDb on top of promised-mongo
+
+[Why are we still using mongoDB 2.1.8?](https://www.google.ca/search?q=node+mongodb+MongoError%3A+no+mongos+proxy+available&oq=node+mongodb+MongoError%3A+no+mongos+proxy+available&aqs=chrome..69i57.6537j0j4&sourceid=chrome&ie=UTF-8)
 
 ## Engines
 
 node >= v6.11.1
 
 ## Change log
-  * 2.4.0 - Upgrade node to v6.11.1 and mock-simple-dao added.
+  * 2.4.4 - Upgrade node to v6.11.1 and mock-simple-dao added.
   * 2.2.1 - Updated docs.
   
   * 2.2.0 - Added new method findAggregate on Operator to be used similar to existing find method.
