@@ -124,6 +124,26 @@ class Operator {
       });
   }
 
+  remove(query) {
+    if (!query) {
+      throw new Error("query can't be undefined or null");
+    }
+    return this
+      .simpleDao
+      .connect()
+      .then((db) => {
+        const collection = db.collection(this.collectionName);
+        return collection.remove(query);
+      })
+      .then((result) => {
+        return result.result;
+      })
+      .catch((err) => {
+        this.simpleDao.logError("operator remove", err);
+        throw err;
+      });
+  }
+
   removeById(id, options) {
     if (typeof id === "string") {
       id = new ObjectID(id);

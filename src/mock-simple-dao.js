@@ -56,6 +56,9 @@ const mockDao = (source) => {
     removeById() {
       return Promise.resolve(source.removeById || {});
     },
+    remove() {
+      return Promise.resolve(source.remove || {});
+    },
     distinct() {
       return Promise.resolve(source.distinct || []);
     }

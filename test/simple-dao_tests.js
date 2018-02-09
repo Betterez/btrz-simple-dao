@@ -483,6 +483,55 @@ describe("SimpleDao", function () {
       });
     });
 
+    describe(".remove(query, options)", function () {
+      const dataMapId = "something",
+        dmr1 = new DataMapResult(dataMapId),
+        dmr2 = new DataMapResult(dataMapId),
+        dmr3 = new DataMapResult("another");
+
+      afterEach(() => {
+        return simpleDao.for(DataMapResult).remove({});
+      });
+
+      it("should remove a single object for the passed objectId", (done) => {
+        simpleDao.save(dmr1).then((saved) => {
+          const promise = simpleDao.for(DataMapResult).remove({_id: saved._id});
+          expect(promise).to.eventually.deep.equal({ok: 1, n: 1}).and.notify(done);
+        })
+        .catch(done);
+      });
+
+      it("should remove several objects with the passed query", (done) => {
+        Promise.all([
+          simpleDao.save(dmr1),
+          simpleDao.save(dmr2),
+          simpleDao.save(dmr3),
+        ])
+        .then(() => {
+          const promise = simpleDao.for(DataMapResult).remove({dataMapId});
+          expect(promise).to.eventually.deep.equal({ok: 1, n: 2}).and.notify(done);
+        })
+        .catch(done);
+      });
+
+      it("should remove all objects if the passed query is empty", (done) => {
+        Promise.all([
+          simpleDao.save(dmr1),
+          simpleDao.save(dmr2),
+          simpleDao.save(dmr3),
+        ])
+        .then(() => {
+          const promise = simpleDao.for(DataMapResult).remove({});
+          expect(promise).to.eventually.deep.equal({ok: 1, n: 3}).and.notify(done);
+        })
+        .catch(done);
+      });
+
+      it("should return 0 count if can't find it", (done) => {
+        const promise = simpleDao.for(DataMapResult).remove({_id: new ObjectID()});
+        expect(promise).to.eventually.deep.equal({ok: 1, n: 0}).and.notify(done);
+      });
+    });
   });
 
   describe("save(model)", function () {
@@ -519,13 +568,7 @@ describe("SimpleDao", function () {
     });
   });
 
-  after(function (done) {
-    simpleDao
-      .dropCollection("datamapresult")
-      .then(function () {
-        done();
-      }).catch(function (err) {
-        done(err);
-      });
+  after(() => {
+    return simpleDao.dropCollection("datamapresult");
   });
 });
