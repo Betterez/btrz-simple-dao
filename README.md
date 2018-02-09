@@ -9,7 +9,12 @@
 node >= v6.11.1
 
 ## Change log
+  * 2.4.6 - Refactor removeById on Operator, document remove and removeById.
+
+  * 2.4.5 - Added new method remove on Operator.
+
   * 2.4.4 - Upgrade node to v6.11.1 and mock-simple-dao added.
+
   * 2.2.1 - Updated docs.
   
   * 2.2.0 - Added new method findAggregate on Operator to be used similar to existing find method.
@@ -25,6 +30,7 @@ node >= v6.11.1
           - Added a logger as a second constructor parameter (it should implement both an `info` and an `error` methods)
 
   * 1.6.2 - Handle disconnect gracefully and reconnects if server comes back on a timely manner.
+
   * 1.3.0 - Adding static and instance methods objectId() and objectId(id) to return an instance of an ObjectID object
           - Improve documentation in the README
 
@@ -219,6 +225,20 @@ You can pass anything to the id not just ObjectID, it will depend on what do you
 An alternative to the `aggregate` method on SimpleDao, but is meant to be used with `for` method (see above). Same options of `aggregate` applies.
 
     let innerCursor = simpleDao.for(Account).findAggregate([{"$match": {...}}, {"$unwind": {...}}, ...]); //Returns an inner cursor with all the aggregates for the account collection.
+
+### .removeById(id)
+
+It will perform a `remove` on the collection that the operator have been created for (see above on the `for` method to understand how the collection name is set) with the query {_id: id}.
+
+    simpleDao.for(Account).removeById(SimpleDao.objectId("55b27c2a74757b3c5e121b0e")); //Returns a promise that will resolve to the remove result: {ok: 1, n: 1} where n is the count of deleted documents.
+
+You can pass anything to the id not just ObjectID, it will depend on what do you use to generate the `_id` in the mongo collections.
+
+### .remove(query)
+
+It will perform a `remove` on the collection that the operator have been created for (see above on the `for` method to understand how the collection name is set) with the given query.
+
+    simpleDao.for(Account).remove({name: "super"}); //Returns a promise that will resolve to the remove result: {ok: 1, n: 5} where n is the count of deleted documents.
 
 ### .update(query, update, options)
 
