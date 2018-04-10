@@ -126,7 +126,11 @@ class SimpleDao {
     if (!model) {
       throw new Error("model can't be undefined or null");
     }
-    let collectionName = getCollectionName(model.constructor);
+    if (model.updatedAt && model.updatedAt.value) {
+      model.updatedAt.value = new Date();
+    }
+
+    const collectionName = getCollectionName(model.constructor);
     return this
       .connect()
       .then((db) => {

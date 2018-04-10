@@ -554,6 +554,36 @@ describe("SimpleDao", function () {
       expect(simpleDao.save(dmr)).to.eventually.have.property("_id").and.notify(done);
     });
 
+    it("should update the value of model.updatedAt if field exists", () => {
+      const dmr = new DataMapResult("1"),
+        dateOfCreation = new Date(),
+        expectedHoursAfterSave = dateOfCreation.getHours();
+
+      dateOfCreation.setHours(dateOfCreation.getHours() - 1);
+      dmr.updatedAt = {value: dateOfCreation};
+
+      return simpleDao.save(dmr).then((saved) => {
+        expect(saved.updatedAt).to.not.be.undefined;
+        expect(saved.updatedAt.value).to.not.be.undefined;
+        expect(saved.updatedAt.value.getHours()).to.equal(expectedHoursAfterSave);
+      })
+    });
+
+    it("should not fail if model.updatedAt is undefined", () => {
+      const dmr = new DataMapResult("1");
+      return simpleDao.save(dmr).then((saved) => {
+        expect(saved.updatedAt).to.be.undefined;
+      })
+    });
+
+    it("should not fail if model.updatedAt.value is undefined", () => {
+      const dmr = new DataMapResult("1");
+      dmr.updatedAt = {value: undefined};
+      return simpleDao.save(dmr).then((saved) => {
+        expect(saved.updatedAt.value).to.be.undefined;
+      })
+    });
+
     it.skip("should use the static collectionName()", function () {
       let saveSpy = sinon.spy();
       let collectionSpy = sinon.spy(function () {
