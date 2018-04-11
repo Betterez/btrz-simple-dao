@@ -9,6 +9,8 @@
 node >= v6.11.1
 
 ## Change log
+  * 2.6.0 - Updated save method to update the updatedAt.value datetime of the saved model if field exists.
+
   * 2.4.6 - Refactor removeById on Operator, document remove and removeById.
 
   * 2.4.5 - Added new method remove on Operator.
