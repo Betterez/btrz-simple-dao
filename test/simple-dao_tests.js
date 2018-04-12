@@ -565,6 +565,7 @@ describe("SimpleDao", function () {
       return simpleDao.save(dmr).then((saved) => {
         expect(saved.updatedAt).to.not.be.undefined;
         expect(saved.updatedAt.value).to.not.be.undefined;
+        expect(saved.updatedAt.value).to.be.a("date");
         expect(saved.updatedAt.value.getHours()).to.equal(expectedHoursAfterSave);
       })
     });
