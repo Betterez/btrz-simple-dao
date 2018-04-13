@@ -127,7 +127,7 @@ class SimpleDao {
       throw new Error("model can't be undefined or null");
     }
     if (model.updatedAt && model.updatedAt.value) {
-      model.updatedAt.value = new Date((new Date()).toUTCString());
+      model.updatedAt.value = new Date();
     }
 
     const collectionName = getCollectionName(model.constructor);

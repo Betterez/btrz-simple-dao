@@ -9,6 +9,8 @@
 node >= v6.11.1
 
 ## Change log
+  * 2.6.2 - Removed now unnecesary forcing updatedAt.value datetime to be UTC.
+
   * 2.6.1 - Forced updatedAt.value datetime to be UTC.
 
   * 2.6.0 - Updated save method to update the updatedAt.value datetime of the saved model if field exists.
