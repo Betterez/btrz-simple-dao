@@ -105,7 +105,7 @@ class SimpleDao {
           .collection(collectionName)
           .aggregate(query,
               {
-                allowDiskUsage: true,
+                allowDiskUse: true,
                 cursor: {batchSize: 1000}
             });
         resolve(cursor);

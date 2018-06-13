@@ -9,7 +9,9 @@
 node >= v6.11.1
 
 ## Change log
-  * 2.6.2 - Removed now unnecesary forcing updatedAt.value datetime to be UTC.
+  * 2.6.3 - Aggregate operations now pass the `allowDiskUse` option instead of `allowDiskUsage` (which had no effect)
+
+  * 2.6.2 - Removed now unnecessary forcing updatedAt.value datetime to be UTC.
 
   * 2.6.1 - Forced updatedAt.value datetime to be UTC.
 
@@ -159,11 +161,11 @@ The promise should resolve to a stream cursor with the result of applying the gi
 The aggregate method will use the following options when calling the database.
 
     {
-      allowDiskUsage: true,
+      allowDiskUse: true,
       cursor: {batchSize: 1000}
     }
 
-`allowDiskUsage` will prevent errors due to size limits on the results.
+`allowDiskUse` will prevent errors due to size limits on the results.
 
 ### .save(model)
 
