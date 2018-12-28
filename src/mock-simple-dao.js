@@ -24,7 +24,7 @@ const mockDao = (source) => {
   source = source || {};
   return {
     for() {return this;},
-    findById() { 
+    findById() {
       return Promise.resolve(source.findById || {});
     },
     find() {
@@ -37,7 +37,7 @@ const mockDao = (source) => {
     save(data) {
       return Promise.resolve(data || source.update || {});
     },
-    aggregate() { 
+    aggregate() {
       return Promise.resolve(source.aggregate || {});
     },
     objectId(id) {
@@ -61,6 +61,9 @@ const mockDao = (source) => {
     },
     distinct() {
       return Promise.resolve(source.distinct || []);
+    },
+    gridfs() {
+      return source.gridfs || {};
     }
   }
 };

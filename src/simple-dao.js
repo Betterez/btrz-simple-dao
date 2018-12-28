@@ -2,6 +2,7 @@
 
 let MongoClient = require("mongodb").MongoClient,
   ObjectID = require("mongodb").ObjectID,
+  GridStore = require('mongodb').GridStore,
   Operator = require("./operator").Operator;
 
 function connectionString(dbConfig) {
@@ -57,6 +58,8 @@ class SimpleDao {
             self.db = null;
             self.logError("connect on close", err);
           });
+
+          db.gridfs = () => self.gridfs(db);
           return db;
         })
         .catch(function (err) {
@@ -66,6 +69,18 @@ class SimpleDao {
         });
     }
     return this.db;
+  }
+
+  // this exists for compatibility with the soon-to-be-removed mongoskin API
+  gridfs(db) {
+    return {
+      open: (fileName, readWriteFlag, callback) => {
+        const store = new GridStore(db, fileName, readWriteFlag);
+        store.open((error, gs) => {
+          callback(error, gs);
+        });
+      },
+    };
   }
 
   collectionNames(cb) {

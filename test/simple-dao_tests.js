@@ -10,6 +10,7 @@ describe("SimpleDao", function () {
     chai = require("chai"),
     chaiAsPromised = require("chai-as-promised"),
     sinon = require("sinon"),
+    mongodb = require("mongodb"),
     config = {
       db: {
       options: {
@@ -23,8 +24,13 @@ describe("SimpleDao", function () {
 
   chai.use(chaiAsPromised);
   let expect = chai.expect, simpleDao;
+
   beforeEach(function () {
     simpleDao = new SimpleDao(config);
+  });
+
+  after(() => {
+    return simpleDao.dropCollection("datamapresult");
   });
 
   describe("objectId", function () {
@@ -186,6 +192,75 @@ describe("SimpleDao", function () {
             let promise = simpleDao.dropCollection("datamapresult");
             expect(promise).to.be.fulfilled;
             expect(promise).to.eventually.be.eql(true).and.notify(done);
+        });
+      });
+    });
+
+    // this exists for compatibility with the soon-to-be-removed mongoskin API
+    describe("connect().then(db => db.gridfs)", function () {
+
+      let db = null;
+
+      const GridStore = require('mongodb').GridStore;
+
+      beforeEach(() => {
+        return simpleDao.connect().then((database) => {
+          db = database;
+        });
+      });
+
+      it('should allow writing files', function (done) {
+        const fileName = "tintin";
+        const path = "test/fixtures/tintin.jpg";
+        const data = require("fs").readFileSync(path);
+
+        return new Promise((resolve, reject) => {
+          db.gridfs().open(fileName, "w", (err, gs) => {
+            if (err) {
+              reject(err, null);
+              return;
+            }
+            gs.write(data, (err2) => {
+              if (err2) {
+                reject(err2, null);
+                return;
+              }
+              gs.close(resolve);
+            });
+          });
+        }).then(() => {
+          const gs = new GridStore(db, fileName, "r");
+          gs.open(function(err, gsx) {
+            gs.seek(0, function() {
+              gs.read(function(err, readData) {
+                db.close();
+                expect(data.toString('base64')).to.eq(readData.toString('base64'));
+                done();
+              });
+            });
+          });
+        });
+      });
+
+      it('should allow reading files', function (done) {
+        const fileName = "tintin";
+        const path = "test/fixtures/tintin.jpg";
+        const data = require("fs").readFileSync(path);
+
+        const gridStore = new GridStore(db, fileName, 'w');
+        gridStore.open(function(err, gridStore) {
+          gridStore.write(data, function(err, gridStore) {
+            gridStore.close(function(err, result) {
+              return simpleDao.connect().then(db => {
+                db.gridfs().open(fileName, "r", function (err, gs) {
+                  gs.read((err, readData) => {
+                    expect(data.toString('base64')).to.eq(readData.toString('base64'));
+                    done();
+                  });
+                });
+              });
+            });
+          });
         });
       });
     });
@@ -597,9 +672,5 @@ describe("SimpleDao", function () {
       expect(saveSpy.calledOnce).to.be.true;
       expect(collectionSpy.getCall(0).args[0]).to.be.eql("a_simple_collection");
     });
-  });
-
-  after(() => {
-    return simpleDao.dropCollection("datamapresult");
   });
 });
