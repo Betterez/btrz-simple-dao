@@ -1,4 +1,4 @@
-# btrz-simple-dao [![npm version](https://badge.fury.io/js/btrz-simple-dao.svg)](https://badge.fury.io/js/btrz-simple-dao)
+# btrz-simple-dao
 
 **Very simple** DAO for MongoDb on top of promised-mongo
 
