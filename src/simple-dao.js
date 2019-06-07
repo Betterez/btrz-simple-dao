@@ -110,23 +110,21 @@ class SimpleDao {
   }
 
   aggregate(collectionName, query) {
-    var self = this;
-    function resolver(resolve, reject) {
-      MongoClient.connect(`mongodb://${self.connectionString}`, function (err, db) {
-        if (err) {
-          return reject(err);
-        }
-        var cursor = db
-          .collection(collectionName)
-          .aggregate(query,
-              {
-                allowDiskUse: true,
-                cursor: {batchSize: 1000}
-            });
-        resolve(cursor);
-      });
-    }
-    return new Promise(resolver);
+    return this
+      .connect()
+        .then((db) => {
+          return db
+            .collection(collectionName)
+            .aggregate(query,
+                {
+                  allowDiskUse: true,
+                  cursor: {batchSize: 1000}
+              });
+        })
+        .catch((err) => {
+          this.logError("aggregate error connect", err);
+          throw err;
+        });
   }
 
   for(ctrFunc) {

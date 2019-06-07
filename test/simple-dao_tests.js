@@ -394,7 +394,10 @@ describe("SimpleDao", function () {
           let query = [
             { $group: { _id: "$accountId", totalPop: { $sum: "$dataMapId" } } }
           ];
-          let result = simpleDao.aggregate("datamapresult", query);
+          let result = null
+          for (var i = 0; i < 100; i++) {
+            result = simpleDao.aggregate("datamapresult", query);
+          }
           expect(result).to.eventually.have.property("on").and.notify(done);
         });
       });
