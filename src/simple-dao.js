@@ -5,7 +5,7 @@ let MongoClient = require("mongodb").MongoClient,
   GridStore = require('mongodb').GridStore,
   Operator = require("./operator").Operator;
 
-function connectionString(dbConfig) {
+function getConnectionString(dbConfig) {
   var uris = dbConfig.uris.join(",");
   if (dbConfig.options.username.length > 0) {
     return `${dbConfig.options.username}:${dbConfig.options.password}@${uris}/${dbConfig.options.database}`;
@@ -21,6 +21,10 @@ function getCollectionName(ctrFunc) {
   return collectionName;
 }
 
+// A collection of all connections to the DB, keyed by the connection string that was used to connect
+const dbConnections = {};
+
+
 class SimpleDao {
 
   static objectId(id) {
@@ -31,7 +35,7 @@ class SimpleDao {
   }
 
   constructor(options, logger) {
-    this.connectionString = connectionString(options.db);
+    this.connectionString = getConnectionString(options.db);
     this.logger = logger;
   }
 
@@ -44,31 +48,38 @@ class SimpleDao {
   logInfo(msg) {
     if (this.logger) {
       this.logger.info(msg);
+    } else {
+      console.log(msg);
     }
   }
 
-  connect() {
-    var self = this;
-    if (!this.db) {
-      this.logInfo("connecting");
-      this.db = MongoClient.connect(`mongodb://${this.connectionString}`)
-        .then((db) => {
-          console.log("adding listener");
-          db.on("close", function (err) {
-            self.db = null;
-            self.logError("connect on close", err);
-          });
+  async connect() {
+    const existingConnection = dbConnections[this.connectionString];
 
-          db.gridfs = () => self.gridfs(db);
-          return db;
-        })
-        .catch(function (err) {
-          self.db = null;
-          self.logError("connect() promise error", err);
-          throw err;
-        });
+    if (existingConnection) {
+      return existingConnection;
     }
-    return this.db;
+
+    this.logInfo("Connecting to Mongo...");
+
+    try {
+      dbConnections[this.connectionString] = await MongoClient.connect(`mongodb://${this.connectionString}`);
+      const db = dbConnections[this.connectionString];
+
+      this.logInfo("Connected to Mongo");
+
+      db.on("close", (err) => {
+        Reflect.deleteProperty(dbConnections, this.connectionString);
+        this.logError("Connection to Mongo unexpectedly closed", err);
+      });
+
+      db.gridfs = () => this.gridfs(db);
+      return db;
+    } catch (err) {
+      Reflect.deleteProperty(dbConnections, this.connectionString);
+      this.logError("Failed to connect to Mongo", err);
+      throw err;
+    }
   }
 
   // this exists for compatibility with the soon-to-be-removed mongoskin API
@@ -168,4 +179,6 @@ class SimpleDao {
   }
 }
 
-exports.SimpleDao = SimpleDao;
+module.exports = {
+  SimpleDao
+};

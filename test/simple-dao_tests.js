@@ -1,19 +1,27 @@
 /*jshint expr: true*/
-"use strict";
+
+const ObjectID = require("mongodb").ObjectID;
+const MongoClient = require("mongodb").MongoClient;
+const chai = require("chai");
+const expect = chai.expect;
+const chaiAsPromised = require("chai-as-promised");
+chai.use(chaiAsPromised);
+const sinon = require("sinon");
+const sandbox = sinon.createSandbox();
+const SimpleDao = require("../").SimpleDao;
+const DataMapResult = require("./data-map-result").DataMapResult;
+const CollectionNameModel = require("./collection-name-model").CollectionNameModel;
+
 
 describe("SimpleDao", function () {
+  let config = null;
+  let simpleDao = null;
 
-  let SimpleDao = require("../").SimpleDao,
-    DataMapResult = require("./data-map-result").DataMapResult,
-    ObjectID = require("mongodb").ObjectID,
-    CollectionNameModel = require("./collection-name-model").CollectionNameModel,
-    chai = require("chai"),
-    chaiAsPromised = require("chai-as-promised"),
-    sinon = require("sinon"),
-    mongodb = require("mongodb"),
+
+  beforeEach(function () {
     config = {
       db: {
-      options: {
+        options: {
           database: "simple_dao_test",
           username: "",
           password: ""
@@ -22,16 +30,17 @@ describe("SimpleDao", function () {
       }
     };
 
-  chai.use(chaiAsPromised);
-  let expect = chai.expect, simpleDao;
-
-  beforeEach(function () {
     simpleDao = new SimpleDao(config);
+  });
+
+  afterEach(async () => {
+    sandbox.restore();
   });
 
   after(() => {
     return simpleDao.dropCollection("datamapresult");
   });
+
 
   describe("objectId", function () {
 
@@ -84,31 +93,6 @@ describe("SimpleDao", function () {
       expect(simpleDao.connectionString).to.be.eql("usr:pwd@127.0.0.1:27017/simple_dao_test");
     });
 
-    it.skip("should not register so many listernes", (done) => {
-      simpleDao = new SimpleDao(config);
-      simpleDao.connect();
-      simpleDao.connect();
-      simpleDao.connect();
-      simpleDao.connect();
-      simpleDao.connect();
-      simpleDao.connect();
-      simpleDao.connect();
-      simpleDao.connect();
-      simpleDao.connect();
-      simpleDao.connect();
-      simpleDao.connect();
-      simpleDao.connect();
-      simpleDao.connect();
-      simpleDao.connect();
-      simpleDao.connect();
-      simpleDao.connect();
-      simpleDao.connect();
-      simpleDao.connect();
-      simpleDao.connect();
-      simpleDao.connect();
-      // done();
-    });
-
     it("should generate a connection-string for many db servers no username/password", function () {
       let config = {
         db: {
@@ -145,6 +129,111 @@ describe("SimpleDao", function () {
       expect(simpleDao.connectionString).to.be.eql("usr:pwd@127.0.0.1:27017,127.0.0.2:27017/simple_dao_test");
     });
 
+  });
+
+  describe("connect", () => {
+    let configForOtherDatabase = null;
+
+    beforeEach(() => {
+      configForOtherDatabase = {
+        db: {
+          options: {
+            database: "simple_dao_test_2",
+            username: "",
+            password: ""
+          },
+          uris: ["127.0.0.1:27017"]
+        }
+      };
+    });
+
+    afterEach(() => {
+
+    });
+
+    it("should connect to the database and return an object that allows operations on the database", async () => {
+      const db = await simpleDao.connect();
+      const result = await db.collection("test_collection").insertOne({test: true});
+      const _id = result.insertedId;
+      const [insertedDocument] = await db.collection("test_collection").find({_id}).toArray();
+      expect(insertedDocument).to.contain({test: true});
+    });
+
+    it("should share database connections across multiple instances of the SimpleDao " +
+      "when a connection to a particular database has already been established", async () => {
+      const connectionSpy = sandbox.spy(MongoClient, "connect");
+
+      expect(connectionSpy.callCount).to.eql(0);
+      const simpleDao2 = new SimpleDao(configForOtherDatabase);
+      const db2 = await simpleDao2.connect();
+      expect(connectionSpy.callCount).to.eql(1);
+
+      // Create a new instance of the SimpleDao and connect to the database again.
+      // Since we already connected to this database in the previous instance, we expect that connection to be re-used.
+      const simpleDao3 = new SimpleDao(configForOtherDatabase);
+      const db3 = await simpleDao3.connect();
+      expect(db3 === db2).to.be.true;
+      expect(connectionSpy.callCount).to.eql(1);
+
+      // Change which database we are connecting to
+      configForOtherDatabase.db.options.database = "simple_dao_test_3";
+
+      // Create a new instance.  We expect it to form a new connection, since we haven't connected to this database yet.
+      const simpleDao4 = new SimpleDao(configForOtherDatabase);
+      const db4 = await simpleDao4.connect();
+      expect(db4 === db3).to.be.false;
+      expect(connectionSpy.callCount).to.eql(2);
+
+      // Create another instance, which should re-use the connection from the previous instance
+      const simpleDao5 = new SimpleDao(configForOtherDatabase);
+      const db5 = await simpleDao5.connect();
+      expect(db5 === db4).to.be.true;
+      expect(connectionSpy.callCount).to.eql(2);
+    });
+
+    it("should automatically reconnect when the database connection was unexpectedly closed", async () => {
+      // Change which database we are connecting to
+      configForOtherDatabase.db.options.database = "simple_dao_test_4";
+
+      const connectionSpy = sandbox.spy(MongoClient, "connect");
+
+      expect(connectionSpy.callCount).to.eql(0);
+      const simpleDao2 = new SimpleDao(configForOtherDatabase);
+      const dbConnection2 = await simpleDao2.connect();
+      expect(connectionSpy.callCount).to.eql(1);
+
+      // Close the database connection.
+      // The next time we try to connect, we expect the simpleDao to form a new connection to the database.
+      dbConnection2.close();
+      const dbConnection3 = await simpleDao2.connect();
+      expect(dbConnection2 === dbConnection3).to.be.false;
+      expect(connectionSpy.callCount).to.eql(2);
+    });
+
+    it("should reconnect on subsequent calls after the initial connection rejects with an error", async () => {
+      // Change which database we are connecting to
+      configForOtherDatabase.db.options.database = "simple_dao_test_5";
+
+      const connectionStub = sandbox.stub(MongoClient, "connect").rejects(new Error("Some mongo error"));
+
+      expect(connectionStub.callCount).to.eql(0);
+      const simpleDao2 = new SimpleDao(configForOtherDatabase);
+      try {
+        await simpleDao2.connect();
+        expect.fail();
+      } catch (err) {
+        expect(err.message).to.eql("Some mongo error");
+        expect(connectionStub.callCount).to.eql(1);
+      }
+
+      // Allow the database connection to proceed normally, without rejection.
+      // We expect the simpleDao to form a new connection to the database.
+      connectionStub.reset();
+      expect(connectionStub.callCount).to.eql(0);
+      connectionStub.callThrough();
+      await simpleDao2.connect();
+      expect(connectionStub.callCount).to.eql(1);
+    });
   });
 
   describe("for(Constructor)", function () {
