@@ -6,11 +6,14 @@ let MongoClient = require("mongodb").MongoClient,
   Operator = require("./operator").Operator;
 
 function getConnectionString(dbConfig) {
-  var uris = dbConfig.uris.join(",");
+  const dbHostUris = dbConfig.uris.join(",");
+  let credentials = "";
+
   if (dbConfig.options.username.length > 0) {
-    return `${dbConfig.options.username}:${dbConfig.options.password}@${uris}/${dbConfig.options.database}`;
+    credentials = `${dbConfig.options.username}:${dbConfig.options.password}@`;
   }
-  return `${uris}/${dbConfig.options.database}`;
+
+  return `${credentials}${dbHostUris}/${dbConfig.options.database}`;
 }
 
 function getCollectionName(ctrFunc) {
