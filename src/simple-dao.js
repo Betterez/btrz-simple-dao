@@ -1,19 +1,62 @@
 "use strict";
 
-let MongoClient = require("mongodb").MongoClient,
-  ObjectID = require("mongodb").ObjectID,
-  GridStore = require('mongodb').GridStore,
-  Operator = require("./operator").Operator;
+const assert = require("assert");
+const MongoClient = require("mongodb").MongoClient;
+const ObjectID = require("mongodb").ObjectID;
+const GridStore = require('mongodb').GridStore;
+const Operator = require("./operator").Operator;
 
-function getConnectionString(dbConfig) {
-  const dbHostUris = dbConfig.uris.join(",");
-  let credentials = "";
+const {DEFAULT_AUTH_MECHANISM, ALL_AUTH_MECHANISMS, ALL_READ_PREFERENCES} = require("../constants");
 
-  if (dbConfig.options.username.length > 0) {
-    credentials = `${dbConfig.options.username}:${dbConfig.options.password}@`;
+
+function getReadPreference(dbConfig) {
+  const readPreference = dbConfig.options.readPreference;
+
+  if (!readPreference) {
+    return null;
   }
 
-  return `${credentials}${dbHostUris}/${dbConfig.options.database}`;
+  assert(ALL_READ_PREFERENCES.includes(readPreference),
+    `When specified, database config 'readPreference' must be one of ${ALL_READ_PREFERENCES.join(", ")}`);
+  return readPreference;
+}
+
+function getAuthMechanism(dbConfig) {
+  const authMechanism = dbConfig.options.authMechanism;
+
+  if (!authMechanism) {
+    return DEFAULT_AUTH_MECHANISM;
+  }
+
+  assert(ALL_AUTH_MECHANISMS.includes(authMechanism), `Database config 'authMechanism' must be one of ${ALL_AUTH_MECHANISMS.join(", ")}`);
+  return authMechanism;
+}
+
+function getConnectionString(dbConfig) {
+  let connectionString = "";
+
+  if (dbConfig.options.username.length > 0) {
+    connectionString += `${dbConfig.options.username}:${dbConfig.options.password}@`;
+  }
+
+  const dbHostUris = dbConfig.uris.join(",");
+  connectionString += dbHostUris;
+  connectionString += `/${dbConfig.options.database}`;
+
+  const authMechanism = getAuthMechanism(dbConfig);
+  connectionString += `?authMechanism=${authMechanism}`;
+
+  const readPreference = getReadPreference(dbConfig);
+  if (readPreference) {
+    connectionString += `&readPreference=${readPreference}`;
+  }
+
+  const replicaSet = dbConfig.options.replicaSet;
+  if (replicaSet) {
+    connectionString += `&replicaSet=${replicaSet}`;
+  }
+
+  return connectionString;
 }
 
 function getCollectionName(ctrFunc) {
@@ -183,5 +226,6 @@ class SimpleDao {
 }
 
 module.exports = {
-  SimpleDao
+  SimpleDao,
+  getConnectionString
 };

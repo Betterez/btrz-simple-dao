@@ -8,7 +8,9 @@ const chaiAsPromised = require("chai-as-promised");
 chai.use(chaiAsPromised);
 const sinon = require("sinon");
 const sandbox = sinon.createSandbox();
+const {ALL_AUTH_MECHANISMS, ALL_READ_PREFERENCES} = require("../constants");
 const SimpleDao = require("../").SimpleDao;
+const {getConnectionString} = require("../src/simple-dao");
 const DataMapResult = require("./data-map-result").DataMapResult;
 const CollectionNameModel = require("./collection-name-model").CollectionNameModel;
 
@@ -82,65 +84,129 @@ describe("SimpleDao", function () {
 
   });
 
-  describe("connection-string", function () {
-
-    it("should generate a connection-string for one db server no username/password", function () {
-      expect(simpleDao.connectionString).to.be.eql("127.0.0.1:27017/simple_dao_test");
+  describe("getConnectionString()", function () {
+    it("should return a valid connection string for one db server", function () {
+      const connectionString = getConnectionString(config.db);
+      expect(connectionString).to.eql("127.0.0.1:27017/simple_dao_test?authMechanism=DEFAULT");
     });
 
-    it("should generate a connection-string for one db server with username/password", function () {
+    it("should return a valid connection string for one db server using authentication credentials", function () {
       let config = {
         db: {
-        options: {
+          options: {
             database: "simple_dao_test",
             username: "usr",
             password: "pwd"
           },
-          uris: [
-            "127.0.0.1:27017"
-          ]
+          uris: ["127.0.0.1:27017"]
         }
       };
-      simpleDao = new SimpleDao(config);
-      expect(simpleDao.connectionString).to.be.eql("usr:pwd@127.0.0.1:27017/simple_dao_test");
+      const connectionString = getConnectionString(config.db);
+      expect(connectionString).to.eql("usr:pwd@127.0.0.1:27017/simple_dao_test?authMechanism=DEFAULT");
     });
 
-    it("should generate a connection-string for many db servers no username/password", function () {
-      let config = {
+    it("should return a valid connection string for many db servers using authentication credentials", function () {
+      const config = {
         db: {
-        options: {
-            database: "simple_dao_test",
-            username: "",
-            password: ""
-          },
-          uris: [
-            "127.0.0.1:27017",
-            "127.0.0.2:27017"
-          ]
-        }
-      };
-      simpleDao = new SimpleDao(config);
-      expect(simpleDao.connectionString).to.be.eql("127.0.0.1:27017,127.0.0.2:27017/simple_dao_test");
-    });
-
-    it("should generate a connection-string for many db server with username/password", function () {
-      let config = {
-        db: {
-        options: {
+          options: {
             database: "simple_dao_test",
             username: "usr",
             password: "pwd"
           },
           uris: [
             "127.0.0.1:27017",
-            "127.0.0.2:27017"
+            "127.0.0.2:27018"
           ]
         }
       };
-      simpleDao = new SimpleDao(config);
-      expect(simpleDao.connectionString).to.be.eql("usr:pwd@127.0.0.1:27017,127.0.0.2:27017/simple_dao_test");
+      const connectionString = getConnectionString(config.db);
+      expect(connectionString).to.eql("usr:pwd@127.0.0.1:27017,127.0.0.2:27018/simple_dao_test?authMechanism=DEFAULT");
     });
 
+    it("should return a valid connection string that includes the specified authentication mechanism", () => {
+      for (const authMechanism of ALL_AUTH_MECHANISMS) {
+        const config = {
+          db: {
+            options: {
+              database: "simple_dao_test",
+              username: "usr",
+              password: "pwd",
+              authMechanism
+            },
+            uris: ["127.0.0.1:27017"]
+          }
+        };
+        const connectionString = getConnectionString(config.db);
+        expect(connectionString).to.eql(`usr:pwd@127.0.0.1:27017/simple_dao_test?authMechanism=${authMechanism}`);
+      }
+    });
+
+    it("should throw an error if an invalid authentication mechanism is specified", () => {
+      const config = {
+        db: {
+          options: {
+            database: "simple_dao_test",
+            username: "usr",
+            password: "pwd",
+            authMechanism: "some_invalid_auth_mechanism"
+          },
+          uris: ["127.0.0.1:27017"]
+        }
+      };
+      expect(() => getConnectionString(config.db))
+        .to.throw("Database config 'authMechanism' must be one of DEFAULT, MONGODB-CR, SCRAM-SHA-1, SCRAM-SHA-256");
+    });
+
+    it("should return a valid connection string that includes the specified read preference", () => {
+      for (const readPreference of ALL_READ_PREFERENCES) {
+        const config = {
+          db: {
+            options: {
+              database: "simple_dao_test",
+              username: "usr",
+              password: "pwd",
+              readPreference
+            },
+            uris: ["127.0.0.1:27017"]
+          }
+        };
+        const connectionString = getConnectionString(config.db);
+        expect(connectionString).to.eql(`usr:pwd@127.0.0.1:27017/simple_dao_test?authMechanism=DEFAULT&readPreference=${readPreference}`);
+      }
+    });
+
+    it("should throw an error if an invalid read preference is specified", () => {
+      const config = {
+        db: {
+          options: {
+            database: "simple_dao_test",
+            username: "usr",
+            password: "pwd",
+            readPreference: "some_invalid_read_preference"
+          },
+          uris: ["127.0.0.1:27017"]
+        }
+      };
+      expect(() => getConnectionString(config.db)).to.throw("When specified, database config 'readPreference' " +
+        "must be one of primary, primaryPreferred, secondary, secondaryPreferred, nearest");
+    });
+
+    it("should return a valid connection string that includes the specified replica set name", () => {
+      const config = {
+        db: {
+          options: {
+            database: "simple_dao_test",
+            username: "usr",
+            password: "pwd",
+            replicaSet: "replica_set_name"
+          },
+          uris: ["127.0.0.1:27017"]
+        }
+      };
+      const connectionString = getConnectionString(config.db);
+      expect(connectionString).to.eql(
+        `usr:pwd@127.0.0.1:27017/simple_dao_test?authMechanism=DEFAULT&replicaSet=${config.db.options.replicaSet}`);
+    });
   });
 
   describe("connect", () => {
