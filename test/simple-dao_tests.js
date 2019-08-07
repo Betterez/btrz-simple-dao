@@ -13,6 +13,12 @@ const DataMapResult = require("./data-map-result").DataMapResult;
 const CollectionNameModel = require("./collection-name-model").CollectionNameModel;
 
 
+async function databaseHasCollection(db, collectionName) {
+  const allCollections = await db.listCollections().toArray();
+  return allCollections.some(collection => collection.name === collectionName);
+}
+
+
 describe("SimpleDao", function () {
   let config = null;
   let simpleDao = null;
@@ -37,8 +43,14 @@ describe("SimpleDao", function () {
     sandbox.restore();
   });
 
-  after(() => {
-    return simpleDao.dropCollection("datamapresult");
+  after(async () => {
+    const db = await simpleDao.connect();
+    const databaseHasDatamapCollection = await databaseHasCollection(db, "datamapresult");
+
+    // When running only part of the test suite using .only, this collection may not exist.  Don't try to drop it if it doesn't exist.
+    if (databaseHasDatamapCollection) {
+      return simpleDao.dropCollection("datamapresult");
+    }
   });
 
 
@@ -151,8 +163,9 @@ describe("SimpleDao", function () {
 
     });
 
-    it("should connect to the database and return an object that allows operations on the database", async () => {
+    it("should connect to the database and return an object that allows operations on the specified database", async () => {
       const db = await simpleDao.connect();
+      expect(db.databaseName).to.eql(config.db.options.database);
       const result = await db.collection("test_collection").insertOne({test: true});
       const _id = result.insertedId;
       const [insertedDocument] = await db.collection("test_collection").find({_id}).toArray();
