@@ -1,3 +1,5 @@
+const Chance = require("chance");
+const chance = new Chance();
 const ObjectID = require("mongodb").ObjectID;
 const MongoClient = require("mongodb").MongoClient;
 const chai = require("chai");
@@ -22,6 +24,17 @@ async function databaseHasCollection(db, collectionName) {
 describe("SimpleDao", () => {
   let config = null;
   let simpleDao = null;
+  let collectionName = null;
+
+  class Model {
+    static collectionName() {
+      return collectionName;
+    }
+
+    static factory(literal) {
+      return Object.assign(new Model(), literal);
+    }
+  }
 
   beforeEach(() => {
     config = {
@@ -34,6 +47,7 @@ describe("SimpleDao", () => {
         uris: ["127.0.0.1:27017"]
       }
     };
+    collectionName = chance.word();
 
     simpleDao = new SimpleDao(config);
   });
@@ -52,7 +66,7 @@ describe("SimpleDao", () => {
     }
   });
 
-  describe("objectId", () => {
+  describe(".objectId()", () => {
     describe("static method", () => {
       it("should return a new objectId", () => {
         expect(SimpleDao.objectId()).to.be.an.instanceOf(ObjectID);
@@ -64,7 +78,7 @@ describe("SimpleDao", () => {
       });
     });
 
-    describe("instance public method", () => {
+    describe("instance method", () => {
       it("should return a new objectId", () => {
         expect(simpleDao.objectId()).to.be.an.instanceOf(ObjectID);
       });
@@ -202,7 +216,7 @@ describe("SimpleDao", () => {
     });
   });
 
-  describe("connect", () => {
+  describe(".connect()", () => {
     let configForOtherDatabase = null;
 
     beforeEach(() => {
@@ -376,41 +390,39 @@ describe("SimpleDao", () => {
     });
   });
 
-  describe(".dropCollection(collectionName)", () => {
-    it("should drop the collection", (done) => {
-      const dmr = new DataMapResult("1");
-      dmr.accountId = "account-id";
-      simpleDao.save(dmr)
-        .then(() => {
-          const promise = simpleDao.dropCollection("datamapresult");
-          expect(promise).to.be.fulfilled;
-          expect(promise).to.eventually.be.eql(true).and.notify(done);
-        });
+  describe(".dropCollection()", () => {
+    it("should drop the specified collection", async () => {
+      const db = await simpleDao.connect();
+      let collectionExists = await databaseHasCollection(db, collectionName);
+      expect(collectionExists).to.be.false;
+
+      const model = Model.factory({a: 1});
+      await simpleDao.save(model);
+      collectionExists = await databaseHasCollection(db, collectionName);
+      expect(collectionExists).to.be.true;
+
+      await simpleDao.dropCollection(collectionName);
+      collectionExists = await databaseHasCollection(db, collectionName);
+      expect(collectionExists).to.be.false;
     });
   });
 
-  describe("for(Constructor)", () => {
-    it("should use the static collectionName()", () => {
-      const findSpy = sinon.spy();
-      const collectionSpy = sinon.spy(() => {
-        return {find: findSpy};
-      });
-      const fakeMongo = {collection: collectionSpy};
-      const sd = new SimpleDao(config);
-      sd.connect = function () {
-        return Promise.resolve(fakeMongo);
-      };
-      sd.for(CollectionNameModel).find()
-        .toCursor()
-        .then(() => {
-          expect(collectionSpy.getCall(0).args[0]).to.be.eql("a_simple_collection");
-        })
-        .catch((err) => {
-          done(err);
-        });
+  describe(".for()", () => {
+    it("should return an Operator with the correct properties", () => {
+      // const model = Model.factory({a: 1});
+      const operator = simpleDao.for(Model);
+      expect(operator.simpleDao).to.eql(simpleDao);
+      expect(operator.collectionName).to.eql(Model.collectionName());
+      expect(operator.factory).to.eql(Model.factory);
     });
 
-    describe(".count(query)", () => {
+    it("should throw an error if the provided constructor function does not have a 'factory' method", () => {
+      expect(() => simpleDao.for({})).to.throw("SimpleDao: The provided constructor function or class needs to have a factory function");
+    });
+  });
+
+  describe("Operator methods", () => {
+    describe(".count()", () => {
       it("should get the count from the collection", (done) => {
         const dmr = new DataMapResult("1");
         dmr.accountId = "account-id";
@@ -424,7 +436,7 @@ describe("SimpleDao", () => {
       });
     });
 
-    describe(".findById(id)", () => {
+    describe(".findById()", () => {
       it("should get a single object for the passed objectId", (done) => {
         const dmr = new DataMapResult("1");
         dmr.accountId = "account-id";
@@ -456,7 +468,7 @@ describe("SimpleDao", () => {
       });
     });
 
-    describe(".findOne(query)", () => {
+    describe(".findOne()", () => {
       it("should get a single object given a query", (done) => {
         const dmr = new DataMapResult("1");
         dmr.accountId = "account-id";
@@ -474,7 +486,7 @@ describe("SimpleDao", () => {
       });
     });
 
-    describe(".find(query, projection).toArray()", () => {
+    describe(".find().toArray()", () => {
       it("should call find on the driver, passing the arguments and returning a promise", (done) => {
         const dmr = new DataMapResult("1");
         dmr.accountId = "account-id";
@@ -498,7 +510,7 @@ describe("SimpleDao", () => {
       });
     });
 
-    describe(".find(query, projection).toCursor()", () => {
+    describe(".find().toCursor()", () => {
       it("should call find on the driver, passing the arguments and returning a cursor", (done) => {
         const dmr = new DataMapResult("1");
         dmr.accountId = "account-id";
@@ -518,7 +530,7 @@ describe("SimpleDao", () => {
       });
     });
 
-    describe("(operator).findAggregate(query)", () => {
+    describe(".findAggregate()", () => {
       it("should call aggregate on the dao, passing the arguments and returning a cursor", (done) => {
         const dmr = new DataMapResult("1");
         dmr.accountId = "account-id";
@@ -541,7 +553,7 @@ describe("SimpleDao", () => {
       });
     });
 
-    describe(".aggregate(collectionName, query)", () => {
+    describe(".aggregate()", () => {
       it("should return a promise with a cursor", (done) => {
         const dmr = new DataMapResult("1");
         dmr.accountId = "account-id";
@@ -558,7 +570,7 @@ describe("SimpleDao", () => {
       });
     });
 
-    describe(".update(query, update, options)", () => {
+    describe(".update()", () => {
       it("should throw if there is no query", () => {
         function sut() {
           simpleDao.for(DataMapResult).update();
@@ -625,7 +637,7 @@ describe("SimpleDao", () => {
       });
     });
 
-    describe(".removeById(id)", () => {
+    describe(".removeById()", () => {
       it("should remove a single object for the passed objectId", (done) => {
         const dmr = new DataMapResult("1");
         simpleDao.save(dmr).then((saved) => {
@@ -654,7 +666,7 @@ describe("SimpleDao", () => {
       });
     });
 
-    describe(".distinct(field, query)", () => {
+    describe(".distinct()", () => {
       beforeEach((done) => {
         const dmr = new DataMapResult("1");
         dmr.field = "A";
@@ -713,7 +725,7 @@ describe("SimpleDao", () => {
       });
     });
 
-    describe(".remove(query, options)", () => {
+    describe(".remove()", () => {
       const dataMapId = "something";
       const dmr1 = new DataMapResult(dataMapId);
       const dmr2 = new DataMapResult(dataMapId);
@@ -764,7 +776,7 @@ describe("SimpleDao", () => {
     });
   });
 
-  describe("save(model)", () => {
+  describe("save()", () => {
     it("should throw if there is no model", () => {
       function sut() {
         simpleDao.save();
