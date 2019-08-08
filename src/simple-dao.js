@@ -177,36 +177,31 @@ class SimpleDao {
     }
   }
 
-  save(model) {
+  async save(model) {
     if (!model) {
-      throw new Error("model can't be undefined or null");
+      throw new Error("SimpleDao: No data was provided in the call to .save()");
     }
+
     if (model.updatedAt && model.updatedAt.value) {
       model.updatedAt.value = new Date();
     }
 
     const collectionName = getCollectionName(model.constructor);
-    return this
-      .connect()
-      .then((db) => {
-        return db
-          .collection(collectionName)
-          .save(model)
-          .then((result) => {
-            if (!model._id) {
-              model._id = result.result.upserted[0]._id;
-            }
-            return model;
-          })
-          .catch((err) => {
-            this.logError("saving error", err);
-            throw err;
-          });
-      })
-      .catch((err) => {
-        this.logError("save error", err);
-        throw err;
-      });
+
+    try {
+      const db = await this.connect();
+      const result = await db.collection(collectionName)
+        .save(model);
+
+      if (!model._id) {
+        model._id = result.result.upserted[0]._id;
+      }
+
+      return model;
+    } catch (err) {
+      this.logError("SimpleDao: Error performing save", err);
+      throw err;
+    }
   }
 }
 
