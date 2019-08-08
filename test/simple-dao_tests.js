@@ -1,5 +1,3 @@
-/*jshint expr: true*/
-
 const ObjectID = require("mongodb").ObjectID;
 const MongoClient = require("mongodb").MongoClient;
 const chai = require("chai");
