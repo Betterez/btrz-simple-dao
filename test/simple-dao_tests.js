@@ -24,6 +24,7 @@ describe("SimpleDao", () => {
   let config = null;
   let simpleDao = null;
   let collectionName = null;
+  let model = null;
 
   class Model {
     static collectionName() {
@@ -47,6 +48,7 @@ describe("SimpleDao", () => {
       }
     };
     collectionName = chance.word();
+    model = Model.factory({a: 1});
 
     simpleDao = new SimpleDao(config);
   });
@@ -400,7 +402,6 @@ describe("SimpleDao", () => {
       let collectionExists = await databaseHasCollection(db, collectionName);
       expect(collectionExists).to.be.false;
 
-      const model = Model.factory({a: 1});
       await simpleDao.save(model);
       collectionExists = await databaseHasCollection(db, collectionName);
       expect(collectionExists).to.be.true;
@@ -413,7 +414,6 @@ describe("SimpleDao", () => {
 
   describe(".for()", () => {
     it("should return an Operator with the correct properties", () => {
-      // const model = Model.factory({a: 1});
       const operator = simpleDao.for(Model);
       expect(operator.simpleDao).to.eql(simpleDao);
       expect(operator.collectionName).to.eql(Model.collectionName());
@@ -444,6 +444,63 @@ describe("SimpleDao", () => {
     it("should reject if an error was encountered when connecting to the database", async () => {
       sandbox.stub(simpleDao, "connect").rejects(new Error("Some connection error"));
       await expect(simpleDao.aggregate(collectionName, {})).to.eventually.be.rejectedWith("Some connection error");
+    });
+  });
+
+  describe(".save()", () => {
+    it("should save the model to the correct collection, as defined by the model constructor's `collectionName()` function", async () => {
+      const db = await simpleDao.connect();
+      let allDocumentsInCollection = await db.collection(model.constructor.collectionName()).find({}).toArray();
+      expect(allDocumentsInCollection).to.have.length(0);
+
+      await simpleDao.save(model);
+      allDocumentsInCollection = await db.collection(model.constructor.collectionName()).find({}).toArray();
+      expect(allDocumentsInCollection).to.have.length(1);
+      expect(allDocumentsInCollection[0]._id.toString()).to.eql(model._id.toString());
+    });
+
+    it("should return the model", async () => {
+      const result = await simpleDao.save(model);
+      Reflect.deleteProperty(result, "_id");
+      expect(result).to.deep.eql(model);
+    });
+
+    it("should reject if a model is not provided", async () => {
+      await expect(simpleDao.save()).to.eventually.be.rejectedWith("SimpleDao: No data was provided in the call to .save()");
+    });
+
+    it("should mutate the model and assign the _id from the saved db document when the original model doesn't have an _id", async () => {
+      expect(model._id).to.not.exist;
+      await simpleDao.save(model);
+      expect(model._id).to.exist;
+      expect(model._id).to.be.an.instanceOf(ObjectID);
+    });
+
+    it("should save the model with its existing _id when the model is provided with an _id", async () => {
+      const _id = ObjectID();
+      model._id = _id;
+      await simpleDao.save(model);
+      expect(model._id.toString()).to.eql(_id.toString());
+    });
+
+    it("should mutate the model and set the value of 'model.updatedAt.value' to the current date, " +
+      "when the model has an 'updatedAt.value' property", async () => {
+      expect(model.updatedAt).to.not.exist;
+
+      await simpleDao.save(model);
+      expect(model.updatedAt).to.not.exist;
+
+      model.updatedAt = {};
+      await simpleDao.save(model);
+      expect(model.updatedAt.value).to.not.exist;
+
+      model.updatedAt = {value: "some value"};
+      await simpleDao.save(model);
+      expect(model.updatedAt.value).to.exist;
+      expect(model.updatedAt.value).to.be.an.instanceOf(Date);
+      // Check that the updatedAt timestamp is within 10 seconds of now
+      const currentTimestamp = new Date().getTime();
+      expect(model.updatedAt.value.getTime()).to.be.within(currentTimestamp - 10000, currentTimestamp + 10000);
     });
   });
 
@@ -782,70 +839,6 @@ describe("SimpleDao", () => {
         const promise = simpleDao.for(DataMapResult).remove({_id: new ObjectID()});
         expect(promise).to.eventually.deep.equal({ok: 1, n: 0}).and.notify(done);
       });
-    });
-  });
-
-  describe("save()", () => {
-    it("should throw if there is no model", () => {
-      function sut() {
-        simpleDao.save();
-      }
-      expect(sut).to.throw();
-    });
-
-    it("should return a promise after saving to the db", () => {
-      const dmr = new DataMapResult("1");
-      const promise = simpleDao.save(dmr);
-      expect(promise.then).to.not.be.undefined;
-    });
-
-    it("should add the _id from the db if the object doesn't have one", (done) => {
-      const dmr = new DataMapResult("1");
-      expect(simpleDao.save(dmr)).to.eventually.have.property("_id").and.notify(done);
-    });
-
-    it("should update the value of model.updatedAt if field exists", () => {
-      const dmr = new DataMapResult("1");
-      const dateOfCreation = new Date();
-      const expectedHoursAfterSave = dateOfCreation.getHours();
-
-      dateOfCreation.setHours(dateOfCreation.getHours() - 1);
-      dmr.updatedAt = {value: dateOfCreation};
-
-      return simpleDao.save(dmr).then((saved) => {
-        expect(saved.updatedAt).to.not.be.undefined;
-        expect(saved.updatedAt.value).to.not.be.undefined;
-        expect(saved.updatedAt.value).to.be.a("date");
-        expect(saved.updatedAt.value.getHours()).to.equal(expectedHoursAfterSave);
-      });
-    });
-
-    it("should not fail if model.updatedAt is undefined", () => {
-      const dmr = new DataMapResult("1");
-      return simpleDao.save(dmr).then((saved) => {
-        expect(saved.updatedAt).to.be.undefined;
-      });
-    });
-
-    it("should not fail if model.updatedAt.value is undefined", () => {
-      const dmr = new DataMapResult("1");
-      dmr.updatedAt = {value: undefined};
-      return simpleDao.save(dmr).then((saved) => {
-        expect(saved.updatedAt.value).to.be.undefined;
-      });
-    });
-
-    it.skip("should use the static collectionName()", () => {
-      const saveSpy = sinon.spy();
-      const collectionSpy = sinon.spy(() => {
-        return {save: saveSpy};
-      });
-      const fakeMongo = {collection: collectionSpy};
-      const cn = new CollectionNameModel();
-      const sd = new SimpleDao(config, fakeMongo);
-      sd.save(cn);
-      expect(saveSpy.calledOnce).to.be.true;
-      expect(collectionSpy.getCall(0).args[0]).to.be.eql("a_simple_collection");
     });
   });
 });
