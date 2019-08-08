@@ -72,13 +72,6 @@ const dbConnections = {};
 
 
 class SimpleDao {
-  static objectId(id) {
-    if (id) {
-      return new ObjectID(id);
-    }
-    return new ObjectID();
-  }
-
   constructor(options, logger) {
     this.connectionString = getConnectionString(options.db);
     this.logger = logger;
@@ -96,6 +89,17 @@ class SimpleDao {
     } else {
       console.log(msg);
     }
+  }
+
+  static objectId(id) {
+    if (id) {
+      return new ObjectID(id);
+    }
+    return new ObjectID();
+  }
+
+  objectId(id) {
+    return SimpleDao.objectId(id);
   }
 
   async connect() {
@@ -139,14 +143,12 @@ class SimpleDao {
     };
   }
 
-  collectionNames(cb) {
-    this.connect()
-      .then((db) => {
-        db.collection("btrz_connected").find({}).toArray(cb);
-      })
-      .catch((err) => {
-        cb(err, null);
-      });
+  for(ctrFunc) {
+    if (!ctrFunc.factory) {
+      throw new Error("The Ctr provided needs to have a factory function");
+    }
+    const collectionName = getCollectionName(ctrFunc);
+    return new Operator(this, collectionName, ctrFunc.factory);
   }
 
   dropCollection(collectionName) {
@@ -159,10 +161,6 @@ class SimpleDao {
         this.logError("dropCollection error connect", err);
         throw err;
       });
-  }
-
-  objectId(id) {
-    return SimpleDao.objectId(id);
   }
 
   aggregate(collectionName, query) {
@@ -181,14 +179,6 @@ class SimpleDao {
         this.logError("aggregate error connect", err);
         throw err;
       });
-  }
-
-  for(ctrFunc) {
-    if (!ctrFunc.factory) {
-      throw new Error("The Ctr provided needs to have a factory function");
-    }
-    const collectionName = getCollectionName(ctrFunc);
-    return new Operator(this, collectionName, ctrFunc.factory);
   }
 
   save(model) {
