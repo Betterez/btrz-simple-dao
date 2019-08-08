@@ -1,8 +1,8 @@
-"use strict";
-let ObjectID = require("mongodb").ObjectID;
+
+const ObjectID = require("mongodb").ObjectID;
 
 class DataMapResult {
-  constructor (dataMapId) {
+  constructor(dataMapId) {
     if (!dataMapId) {
       throw new Error("DataMapResult needs a dataMapId");
     }
@@ -11,8 +11,9 @@ class DataMapResult {
     this.status = "pending";
     this.errors = [];
   }
+
   static factory(literal) {
-    let dmr = new DataMapResult(literal.dataMapId);
+    const dmr = new DataMapResult(literal.dataMapId);
     dmr._id = literal._id;
     dmr.dataMapId = literal.dataMapId;
     dmr.status = literal.status;

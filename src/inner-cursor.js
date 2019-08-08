@@ -1,15 +1,17 @@
-"use strict";
 
-let utils = require("./utils");
+
+const utils = require("./utils");
 
 class InnerCursor {
-  constructor (cursor, factory) {
+  constructor(cursor, factory) {
     this.cursor = cursor;
     this.factory = factory;
   }
+
   toCursor() {
     return this.cursor;
   }
+
   toArray() {
     return this.cursor
       .then((c) => {

@@ -1,11 +1,11 @@
-"use strict";
 
-let InnerCursor =  require("./inner-cursor").InnerCursor,
-  ObjectID = require("mongodb").ObjectID,
-  utils = require("./utils");
+
+const InnerCursor = require("./inner-cursor").InnerCursor;
+const ObjectID = require("mongodb").ObjectID;
+const utils = require("./utils");
 
 function promisedCursor(collection, query, options) {
-  return new Promise(function (resolve, reject) {
+  return new Promise(((resolve, reject) => {
     collection.find(query, options || {}, (err, result) => {
       if (err) {
         reject(err);
@@ -13,7 +13,7 @@ function promisedCursor(collection, query, options) {
         resolve(result);
       }
     });
-  });
+  }));
 }
 
 class Operator {
@@ -45,27 +45,27 @@ class Operator {
   }
 
   find(query, options) {
-    let cursor = this
-        .simpleDao
-        .connect()
-        .then((db) => {
-          let collection = db.collection(this.collectionName);
-          return promisedCursor(collection, query, options || {});
-        })
-        .catch((err) => {
-          this.simpleDao.logError("operator find", err);
-          throw err;
-        });
+    const cursor = this
+      .simpleDao
+      .connect()
+      .then((db) => {
+        const collection = db.collection(this.collectionName);
+        return promisedCursor(collection, query, options || {});
+      })
+      .catch((err) => {
+        this.simpleDao.logError("operator find", err);
+        throw err;
+      });
     return new InnerCursor(cursor, this.factory);
   }
 
   findAggregate(query) {
-    let cursorPromised = this.simpleDao.aggregate(this.collectionName, query);
+    const cursorPromised = this.simpleDao.aggregate(this.collectionName, query);
     return new InnerCursor(cursorPromised, this.factory);
   }
 
   findOne(query) {
-    let factory = this.factory;
+    const factory = this.factory;
     return this
       .simpleDao
       .connect()
@@ -106,10 +106,10 @@ class Operator {
       .simpleDao
       .connect()
       .then((db) => {
-        let collection = db.collection(this.collectionName);
+        const collection = db.collection(this.collectionName);
         return collection.update(query, update, options || {})
           .then((result) => {
-            let endResult = result.result;
+            const endResult = result.result;
             endResult.updatedExisting = endResult.nModified > 0;
             return endResult;
           })
@@ -151,12 +151,12 @@ class Operator {
     return this.remove({_id: id});
   }
 
-  distinct(field, query){
+  distinct(field, query) {
     return this
       .simpleDao
       .connect()
       .then((db) => {
-        let collection = db.collection(this.collectionName);
+        const collection = db.collection(this.collectionName);
         return collection.distinct(field || "", query || {});
       })
       .catch((err) => {

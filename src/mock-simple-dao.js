@@ -1,6 +1,6 @@
-"use strict";
-const {objectId} = require("./simple-dao").SimpleDao,
-  InnerCursor =  require("./inner-cursor").InnerCursor;
+
+const {objectId} = require("./simple-dao").SimpleDao;
+const InnerCursor = require("./inner-cursor").InnerCursor;
 
 const mockDataResult = {
   getCollectionName() {
@@ -23,7 +23,7 @@ const cursor = (data) => {
 const mockDao = (source) => {
   source = source || {};
   return {
-    for() {return this;},
+    for() { return this; },
     findById() {
       return Promise.resolve(source.findById || {});
     },
@@ -65,7 +65,7 @@ const mockDao = (source) => {
     gridfs() {
       return source.gridfs || {};
     }
-  }
+  };
 };
 
 module.exports = mockDao;

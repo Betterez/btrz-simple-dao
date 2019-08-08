@@ -1,4 +1,4 @@
-"use strict";
+
 function _buildModel(factory) {
   return function (model) {
     return factory(model);

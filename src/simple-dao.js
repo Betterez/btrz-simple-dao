@@ -1,9 +1,9 @@
-"use strict";
+
 
 const assert = require("assert");
 const MongoClient = require("mongodb").MongoClient;
 const ObjectID = require("mongodb").ObjectID;
-const GridStore = require('mongodb').GridStore;
+const GridStore = require("mongodb").GridStore;
 const Operator = require("./operator").Operator;
 
 const {DEFAULT_AUTH_MECHANISM, ALL_AUTH_MECHANISMS, ALL_READ_PREFERENCES} = require("../constants");
@@ -72,7 +72,6 @@ const dbConnections = {};
 
 
 class SimpleDao {
-
   static objectId(id) {
     if (id) {
       return new ObjectID(id);
@@ -119,7 +118,7 @@ class SimpleDao {
         this.logError("Connection to Mongo unexpectedly closed", err);
       });
 
-      db.gridfs = () => this.gridfs(db);
+      db.gridfs = () => { return this.gridfs(db); };
       return db;
     } catch (err) {
       Reflect.deleteProperty(dbConnections, this.connectionString);
@@ -136,7 +135,7 @@ class SimpleDao {
         store.open((error, gs) => {
           callback(error, gs);
         });
-      },
+      }
     };
   }
 
@@ -169,26 +168,26 @@ class SimpleDao {
   aggregate(collectionName, query) {
     return this
       .connect()
-        .then((db) => {
-          return db
-            .collection(collectionName)
-            .aggregate(query,
-                {
-                  allowDiskUse: true,
-                  cursor: {batchSize: 1000}
-              });
-        })
-        .catch((err) => {
-          this.logError("aggregate error connect", err);
-          throw err;
-        });
+      .then((db) => {
+        return db
+          .collection(collectionName)
+          .aggregate(query,
+            {
+              allowDiskUse: true,
+              cursor: {batchSize: 1000}
+            });
+      })
+      .catch((err) => {
+        this.logError("aggregate error connect", err);
+        throw err;
+      });
   }
 
   for(ctrFunc) {
     if (!ctrFunc.factory) {
       throw new Error("The Ctr provided needs to have a factory function");
     }
-    let collectionName = getCollectionName(ctrFunc);
+    const collectionName = getCollectionName(ctrFunc);
     return new Operator(this, collectionName, ctrFunc.factory);
   }
 

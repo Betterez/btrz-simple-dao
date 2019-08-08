@@ -1,24 +1,25 @@
-"use strict";
 
-describe("Mock SimpleDao", function () {
-  const mockDao = require("../").mockSimpleDao,
-    SimpleDao = require("../").SimpleDao,
-    chai = require("chai"),
-    expect = chai.expect,
-    config = {
-      db: {
+
+describe("Mock SimpleDao", () => {
+  const mockDao = require("../").mockSimpleDao;
+  const SimpleDao = require("../").SimpleDao;
+  const chai = require("chai");
+  const expect = chai.expect;
+  const config = {
+    db: {
       options: {
-          database: "simple_dao_test",
-          username: "",
-          password: ""
-        },
-        uris: ["127.0.0.1:27017"]
-      }
-    },
-    excludedMethods = ["constructor", "connect", "logError", "logInfo", "collectionNames", "dropCollection"];
-  let simpleDao, source;
-  
-  beforeEach(function () {
+        database: "simple_dao_test",
+        username: "",
+        password: ""
+      },
+      uris: ["127.0.0.1:27017"]
+    }
+  };
+  const excludedMethods = ["constructor", "connect", "logError", "logInfo", "collectionNames", "dropCollection"];
+  let simpleDao; let
+    source;
+
+  beforeEach(() => {
     simpleDao = new SimpleDao(config);
     source = {
       find: [{foo: "bar"}],
@@ -32,25 +33,25 @@ describe("Mock SimpleDao", function () {
     };
   });
 
-  // this tests the mock contains the same api that simple-dao, 
+  // this tests the mock contains the same api that simple-dao,
   // then if we add any method to simple-dao it should be reflected in the mock dao
   it("should use the simple-dao api", () => {
-    const DataMapResult = require("./data-map-result").DataMapResult,
-      daoMethods = Object.getOwnPropertyNames(Object.getPrototypeOf(simpleDao))
-        .filter((method) => {
-          return excludedMethods.indexOf(method) === -1 && typeof simpleDao[method] === "function";
-        }),
-      operator = simpleDao.for(DataMapResult),
-      operatorMethods = Object.getOwnPropertyNames(Object.getPrototypeOf(operator))
-        .filter((method) => {
-          return excludedMethods.indexOf(method) === -1 && typeof operator[method] === "function";
-        });
-    
-    
+    const DataMapResult = require("./data-map-result").DataMapResult;
+    const daoMethods = Object.getOwnPropertyNames(Object.getPrototypeOf(simpleDao))
+      .filter((method) => {
+        return excludedMethods.indexOf(method) === -1 && typeof simpleDao[method] === "function";
+      });
+    const operator = simpleDao.for(DataMapResult);
+    const operatorMethods = Object.getOwnPropertyNames(Object.getPrototypeOf(operator))
+      .filter((method) => {
+        return excludedMethods.indexOf(method) === -1 && typeof operator[method] === "function";
+      });
+
+
     daoMethods.forEach((prop) => {
       expect(mockDao(source)[prop]).to.be.a("function");
     });
-    
+
     operatorMethods.forEach((prop) => {
       expect(mockDao(source)[prop]).to.be.a("function");
     });
@@ -59,7 +60,7 @@ describe("Mock SimpleDao", function () {
   it("should convert the objectId", () => {
     const id = simpleDao.objectId();
     expect(mockDao().objectId(id.toString())).to.be.eql(id);
-  })
+  });
 
   it("should return the find result", (done) => {
     return mockDao(source).for().find().toArray()

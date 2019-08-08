@@ -1,8 +1,8 @@
-"use strict";
-let ObjectID = require("mongodb").ObjectID;
+
+const ObjectID = require("mongodb").ObjectID;
 
 class CollectionNameModel {
-  constructor () {
+  constructor() {
     this._id = new ObjectID();
     this.name = "some name";
   }
@@ -12,7 +12,7 @@ class CollectionNameModel {
   }
 
   static factory(literal) {
-    let cn = new CollectionNameModel();
+    const cn = new CollectionNameModel();
     cn._id = literal._id;
     cn.name = literal.name;
     return cn;
