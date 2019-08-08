@@ -1,7 +1,6 @@
 const Chance = require("chance");
 const chance = new Chance();
-const ObjectID = require("mongodb").ObjectID;
-const MongoClient = require("mongodb").MongoClient;
+const {ObjectID, MongoClient, Cursor} = require("mongodb");
 const chai = require("chai");
 const expect = chai.expect;
 const chaiAsPromised = require("chai-as-promised");
@@ -54,6 +53,11 @@ describe("SimpleDao", () => {
 
   afterEach(async () => {
     sandbox.restore();
+
+    const db = await simpleDao.connect();
+    try {
+      await db.dropCollection(collectionName);
+    } catch (err) {}
   });
 
   after(async () => {
@@ -421,6 +425,28 @@ describe("SimpleDao", () => {
     });
   });
 
+  describe(".aggregate()", () => {
+    it("should perform the specified aggregate query on the specified collection", async () => {
+      const modelOne = Model.factory({a: 1});
+      const modelTwo = Model.factory({a: 2});
+      await Promise.all([
+        simpleDao.save(modelOne),
+        simpleDao.save(modelTwo)
+      ]);
+
+      const query = {$group: {_id: 1, total: {$sum: "$a"}}};
+      const cursor = await simpleDao.aggregate(collectionName, query);
+      expect(cursor.constructor.name).to.eql("AggregationCursor");
+      const result = await cursor.toArray();
+      expect(result).to.deep.eql([{_id: 1, total: 3}]);
+    });
+
+    it("should reject if an error was encountered when connecting to the database", async () => {
+      sandbox.stub(simpleDao, "connect").rejects(new Error("Some connection error"));
+      await expect(simpleDao.aggregate(collectionName, {})).to.eventually.be.rejectedWith("Some connection error");
+    });
+  });
+
   describe("Operator methods", () => {
     describe(".count()", () => {
       it("should get the count from the collection", (done) => {
@@ -549,23 +575,6 @@ describe("SimpleDao", () => {
             .catch((err) => {
               done(err);
             });
-        });
-      });
-    });
-
-    describe(".aggregate()", () => {
-      it("should return a promise with a cursor", (done) => {
-        const dmr = new DataMapResult("1");
-        dmr.accountId = "account-id";
-        simpleDao.save(dmr).then(() => {
-          const query = [
-            {$group: {_id: "$accountId", totalPop: {$sum: "$dataMapId"}}}
-          ];
-          let result = null;
-          for (let i = 0; i < 100; i++) {
-            result = simpleDao.aggregate("datamapresult", query);
-          }
-          expect(result).to.eventually.have.property("on").and.notify(done);
         });
       });
     });

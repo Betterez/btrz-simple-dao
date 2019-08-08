@@ -161,22 +161,20 @@ class SimpleDao {
     }
   }
 
-  aggregate(collectionName, query) {
-    return this
-      .connect()
-      .then((db) => {
-        return db
-          .collection(collectionName)
-          .aggregate(query,
-            {
-              allowDiskUse: true,
-              cursor: {batchSize: 1000}
-            });
-      })
-      .catch((err) => {
-        this.logError("aggregate error connect", err);
-        throw err;
-      });
+  async aggregate(collectionName, query) {
+    try {
+      const db = await this.connect();
+      return db
+        .collection(collectionName)
+        .aggregate(query,
+          {
+            allowDiskUse: true,
+            cursor: {batchSize: 1000}
+          });
+    } catch (err) {
+      this.logError("SimpleDao: Error performing aggregate query", err);
+      throw err;
+    }
   }
 
   save(model) {
