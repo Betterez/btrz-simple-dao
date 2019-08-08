@@ -151,16 +151,14 @@ class SimpleDao {
     return new Operator(this, collectionName, ctrFunc.factory);
   }
 
-  dropCollection(collectionName) {
-    return this
-      .connect()
-      .then((db) => {
-        return db.dropCollection(collectionName);
-      })
-      .catch((err) => {
-        this.logError("dropCollection error connect", err);
-        throw err;
-      });
+  async dropCollection(collectionName) {
+    try {
+      const db = await this.connect();
+      return db.dropCollection(collectionName);
+    } catch (err) {
+      this.logError(`SimpleDao: Error dropping collection '${collectionName}'`, err);
+      throw err;
+    }
   }
 
   aggregate(collectionName, query) {
