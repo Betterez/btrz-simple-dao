@@ -145,7 +145,7 @@ class SimpleDao {
 
   for(ctrFunc) {
     if (!ctrFunc.factory) {
-      throw new Error("The Ctr provided needs to have a factory function");
+      throw new Error("SimpleDao: The provided constructor function or class needs to have a factory function");
     }
     const collectionName = getCollectionName(ctrFunc);
     return new Operator(this, collectionName, ctrFunc.factory);
