@@ -3,19 +3,6 @@ const ObjectID = require("mongodb").ObjectID;
 const utils = require("./utils");
 
 
-function promisedCursor(collection, query, options) {
-  return new Promise(((resolve, reject) => {
-    collection.find(query, options || {}, (err, result) => {
-      if (err) {
-        reject(err);
-      } else {
-        resolve(result);
-      }
-    });
-  }));
-}
-
-
 class Operator {
   constructor(simpleDao, collectionName, factory) {
     this.simpleDao = simpleDao;
@@ -33,18 +20,18 @@ class Operator {
     }
   }
 
-  find(query, options) {
+  find(query, options = {}) {
     const cursor = this
       .simpleDao
       .connect()
       .then((db) => {
-        const collection = db.collection(this.collectionName);
-        return promisedCursor(collection, query, options || {});
+        return db.collection(this.collectionName).find(query, options);
       })
       .catch((err) => {
-        this.simpleDao.logError("operator find", err);
+        this.simpleDao.logError("SimpleDao: Error performing find", err);
         throw err;
       });
+
     return new InnerCursor(cursor, this.factory);
   }
 
