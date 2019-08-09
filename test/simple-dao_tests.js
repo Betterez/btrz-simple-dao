@@ -11,7 +11,6 @@ const {ALL_AUTH_MECHANISMS, ALL_READ_PREFERENCES} = require("../constants");
 const SimpleDao = require("../").SimpleDao;
 const {getConnectionString} = require("../src/simple-dao");
 const DataMapResult = require("./data-map-result").DataMapResult;
-const CollectionNameModel = require("./collection-name-model").CollectionNameModel;
 
 
 async function databaseHasCollection(db, collectionName) {
@@ -47,7 +46,7 @@ describe("SimpleDao", () => {
         uris: ["127.0.0.1:27017"]
       }
     };
-    collectionName = chance.word();
+    collectionName = chance.word({length: 10});
     model = Model.factory({a: 1});
 
     simpleDao = new SimpleDao(config);
@@ -547,46 +546,42 @@ describe("SimpleDao", () => {
       });
     });
 
-    describe(".find().toArray()", () => {
-      it("should call find on the driver, passing the arguments and returning a promise", (done) => {
-        const dmr = new DataMapResult("1");
-        dmr.accountId = "account-id";
-        simpleDao.save(dmr).then(() => {
-          const query = {accountId: "account-id"};
-          const promise = simpleDao.for(DataMapResult).find(query).toArray();
-          expect(promise).to.be.fulfilled;
-          expect(promise).to.eventually.have.length.above(0).and.notify(done);
+    describe(".find()", () => {
+      describe(".toArray()", () => {
+        it("should return an array of all documents that match the specified query", async () => {
+          const modelOne = Model.factory({a: 1});
+          const modelTwo = Model.factory({a: 2});
+          await Promise.all([
+            simpleDao.save(modelOne),
+            simpleDao.save(modelTwo)
+          ]);
+
+          let result = await simpleDao.for(Model).find({a: {$gt: 0}}).toArray();
+          expect(result).to.have.length(2);
+
+          result = await simpleDao.for(Model).find({a: 1}).toArray();
+          expect(result).to.have.length(1);
+        });
+
+        it("should reject if there was an error performing the query", async () => {
+          return expect(simpleDao.for(Model).find({a: {$badOperator: 0}}).toArray()).to.eventually.be.rejectedWith("unknown operator");
         });
       });
 
-      it("should throw if the ObjectType doesn't have a factory function", () => {
-        function NoFactory() {
+      describe(".toCursor()", () => {
+        it("should return a cursor for all documents that match the specified query", async () => {
+          const modelOne = Model.factory({a: 1});
+          const modelTwo = Model.factory({a: 2});
+          await Promise.all([
+            simpleDao.save(modelOne),
+            simpleDao.save(modelTwo)
+          ]);
 
-        }
-        function sut() {
-          const sd = new SimpleDao(config);
-          sd.for(NoFactory);
-        }
-        expect(sut).to.throw();
-      });
-    });
+          const cursor = await simpleDao.for(Model).find({a: {$gt: 0}}).toCursor();
+          expect(cursor).to.be.an.instanceOf(Cursor);
 
-    describe(".find().toCursor()", () => {
-      it("should call find on the driver, passing the arguments and returning a cursor", (done) => {
-        const dmr = new DataMapResult("1");
-        dmr.accountId = "account-id";
-        simpleDao.save(dmr).then(() => {
-          const query = {accountId: "account-id"};
-          simpleDao.for(DataMapResult)
-            .find(query)
-            .toCursor()
-            .then((cursor) => {
-              expect(cursor.next).to.be.a("function");
-              done();
-            })
-            .catch((err) => {
-              done(err);
-            });
+          const results = await cursor.toArray();
+          expect(results).to.have.length(2);
         });
       });
     });
