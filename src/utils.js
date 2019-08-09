@@ -5,13 +5,6 @@ function _buildModel(factory) {
   };
 }
 
-function _mapFor(factory) {
-  return function findHandler(models) {
-    return models.map(_buildModel(factory));
-  };
-}
-
 module.exports = {
-  buildModel: _buildModel,
-  mapFor: _mapFor
+  buildModel: _buildModel
 };
