@@ -1,25 +1,19 @@
 
-
-const utils = require("./utils");
-
 class InnerCursor {
-  constructor(cursor, factory) {
-    this.cursor = cursor;
+  constructor(cursorPromise, factory) {
+    this.cursorPromise = cursorPromise;
     this.factory = factory;
   }
 
   toCursor() {
-    return this.cursor;
+    return this.cursorPromise;
   }
 
-  toArray() {
-    return this.cursor
-      .then((c) => {
-        return c.toArray().then(utils.mapFor(this.factory));
-      })
-      .catch((err) => {
-        throw err;
-      });
+  async toArray() {
+    const cursor = await this.cursorPromise;
+    const results = await cursor.toArray();
+
+    return results.map(this.factory);
   }
 }
 
