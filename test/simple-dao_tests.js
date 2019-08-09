@@ -522,17 +522,24 @@ describe("SimpleDao", () => {
   });
 
   describe("Operator methods", () => {
+    let modelOne = null;
+    let modelTwo = null;
+    let modelThree = null;
+
+    beforeEach(async () => {
+      modelOne = Model.factory({a: 1});
+      modelTwo = Model.factory({a: 2});
+      modelThree = Model.factory({a: 2});
+
+      await Promise.all([
+        simpleDao.save(modelOne),
+        simpleDao.save(modelTwo),
+        simpleDao.save(modelThree)
+      ]);
+    });
+
     describe(".count()", () => {
       it("should return the number of records that match the specified query", async () => {
-        const modelOne = Model.factory({a: 1});
-        const modelTwo = Model.factory({a: 2});
-        const modelThree = Model.factory({a: 2});
-        await Promise.all([
-          simpleDao.save(modelOne),
-          simpleDao.save(modelTwo),
-          simpleDao.save(modelThree)
-        ]);
-
         let count = await simpleDao.for(Model).count({a: 1});
         expect(count).to.eql(1);
 
@@ -549,18 +556,25 @@ describe("SimpleDao", () => {
     describe(".find()", () => {
       describe(".toArray()", () => {
         it("should return an array of all documents that match the specified query", async () => {
-          const modelOne = Model.factory({a: 1});
-          const modelTwo = Model.factory({a: 2});
-          await Promise.all([
-            simpleDao.save(modelOne),
-            simpleDao.save(modelTwo)
-          ]);
+          let results = await simpleDao.for(Model).find({a: {$gt: 0}}).toArray();
+          expect(results).to.have.length(3);
 
-          let result = await simpleDao.for(Model).find({a: {$gt: 0}}).toArray();
-          expect(result).to.have.length(2);
+          results = await simpleDao.for(Model).find({a: 1}).toArray();
+          expect(results).to.have.length(1);
+        });
 
-          result = await simpleDao.for(Model).find({a: 1}).toArray();
-          expect(result).to.have.length(1);
+        it("should return an array of objects that are instances of the provided class, " +
+          "created via the class' .factory() method", async () => {
+          const factorySpy = sandbox.spy(Model, "factory");
+          expect(factorySpy.callCount).to.eql(0);
+
+          const results = await simpleDao.for(Model).find({}).toArray();
+          expect(results).to.have.length.gt(0);
+          expect(factorySpy.callCount).to.eql(results.length);
+
+          for (const data of results) {
+            expect(data).to.be.an.instanceOf(Model);
+          }
         });
 
         it("should reject if there was an error performing the query", async () => {
@@ -570,18 +584,11 @@ describe("SimpleDao", () => {
 
       describe(".toCursor()", () => {
         it("should return a cursor for all documents that match the specified query", async () => {
-          const modelOne = Model.factory({a: 1});
-          const modelTwo = Model.factory({a: 2});
-          await Promise.all([
-            simpleDao.save(modelOne),
-            simpleDao.save(modelTwo)
-          ]);
-
           const cursor = await simpleDao.for(Model).find({a: {$gt: 0}}).toCursor();
           expect(cursor).to.be.an.instanceOf(Cursor);
 
           const results = await cursor.toArray();
-          expect(results).to.have.length(2);
+          expect(results).to.have.length(3);
         });
       });
     });
