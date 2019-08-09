@@ -506,16 +506,26 @@ describe("SimpleDao", () => {
 
   describe("Operator methods", () => {
     describe(".count()", () => {
-      it("should get the count from the collection", (done) => {
-        const dmr = new DataMapResult("1");
-        dmr.accountId = "account-id";
-        simpleDao.save(dmr)
-          .then(() => {
-            const query = {accountId: "account-id"};
-            const promise = simpleDao.for(DataMapResult).count(query);
-            expect(promise).to.be.fulfilled;
-            expect(promise).to.eventually.be.eql(1).and.notify(done);
-          });
+      it("should return the number of records that match the specified query", async () => {
+        const modelOne = Model.factory({a: 1});
+        const modelTwo = Model.factory({a: 2});
+        const modelThree = Model.factory({a: 2});
+        await Promise.all([
+          simpleDao.save(modelOne),
+          simpleDao.save(modelTwo),
+          simpleDao.save(modelThree)
+        ]);
+
+        let count = await simpleDao.for(Model).count({a: 1});
+        expect(count).to.eql(1);
+
+        count = await simpleDao.for(Model).count({a: 2});
+        expect(count).to.eql(2);
+      });
+
+      it("should reject if an error was encountered when connecting to the database", async () => {
+        sandbox.stub(simpleDao, "connect").rejects(new Error("Some connection error"));
+        await expect(simpleDao.for(Model).count({})).to.eventually.be.rejectedWith("Some connection error");
       });
     });
 
