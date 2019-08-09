@@ -1,8 +1,7 @@
-
-
 const InnerCursor = require("./inner-cursor").InnerCursor;
 const ObjectID = require("mongodb").ObjectID;
 const utils = require("./utils");
+
 
 function promisedCursor(collection, query, options) {
   return new Promise(((resolve, reject) => {
@@ -16,6 +15,7 @@ function promisedCursor(collection, query, options) {
   }));
 }
 
+
 class Operator {
   constructor(simpleDao, collectionName, factory) {
     this.simpleDao = simpleDao;
@@ -23,25 +23,14 @@ class Operator {
     this.factory = factory;
   }
 
-  count(query) {
-    return this
-      .simpleDao
-      .connect()
-      .then((db) => {
-        return db
-          .collection(this.collectionName)
-          .count(query)
-          .then((result) => {
-            return result;
-          })
-          .catch((err) => {
-            throw err;
-          });
-      })
-      .catch((err) => {
-        this.simpleDao.logError("operator count connect", err);
-        throw err;
-      });
+  async count(query) {
+    try {
+      const db = await this.simpleDao.connect();
+      return db.collection(this.collectionName).count(query);
+    } catch (err) {
+      this.simpleDao.logError("SimpleDao: Error performing count", err);
+      throw err;
+    }
   }
 
   find(query, options) {
