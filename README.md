@@ -1,49 +1,11 @@
 # btrz-simple-dao
 
-**Very simple** DAO for MongoDb on top of promised-mongo
+A **very simple** DAO for MongoDb.
+Compatible with NodeJS versions 6.11.1 and higher.
 
-[Why are we still using mongoDB 2.1.8?](https://www.google.ca/search?q=node+mongodb+MongoError%3A+no+mongos+proxy+available&oq=node+mongodb+MongoError%3A+no+mongos+proxy+available&aqs=chrome..69i57.6537j0j4&sourceid=chrome&ie=UTF-8)
-
-## Engines
-
-node >= v6.11.1
 
 ## Change log
-  * 2.6.3 - Aggregate operations now pass the `allowDiskUse` option instead of `allowDiskUsage` (which had no effect)
-
-  * 2.6.2 - Removed now unnecessary forcing updatedAt.value datetime to be UTC.
-
-  * 2.6.1 - Forced updatedAt.value datetime to be UTC.
-
-  * 2.6.0 - Updated save method to update the updatedAt.value datetime of the saved model if field exists.
-
-  * 2.4.6 - Refactor removeById on Operator, document remove and removeById.
-
-  * 2.4.5 - Added new method remove on Operator.
-
-  * 2.4.4 - Upgrade node to v6.11.1 and mock-simple-dao added.
-
-  * 2.2.1 - Updated docs.
-  
-  * 2.2.0 - Added new method findAggregate on Operator to be used similar to existing find method.
-  
-  * 2.1.1 - Fixing a memory leak since we were re-adding the listener to the on("error") of the db for each operation. If you are using 2.0.0 or 2.1.0 update now.
-  
-  * 2.1.0 - Added .count() method to return a count.
-          - Added .dropCollection() method
-
-  * 2.0.0 - Removed dependency on promised-mongo,
-          - Modified the API: toCursor() now also returns a promise.
-          - Catch disconnect events and will reconnect automatically in the net request that can find an available connection.
-          - Added a logger as a second constructor parameter (it should implement both an `info` and an `error` methods)
-
-  * 1.6.2 - Handle disconnect gracefully and reconnects if server comes back on a timely manner.
-
-  * 1.3.0 - Adding static and instance methods objectId() and objectId(id) to return an instance of an ObjectID object
-          - Improve documentation in the README
-
-  * 1.2.0 - Adding support for static collectioName() to override the name of a collection (don't need to be the name of the class to map)
-          - Adding support for aggregate cursors directly under `SimpleDao`
+See releases
 
 ## General usage
 
