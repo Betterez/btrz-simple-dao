@@ -547,56 +547,6 @@ describe("SimpleDao", () => {
       });
     });
 
-    describe(".findById()", () => {
-      it("should get a single object for the passed objectId", (done) => {
-        const dmr = new DataMapResult("1");
-        dmr.accountId = "account-id";
-        simpleDao.save(dmr)
-          .then((saved) => {
-            const promise = simpleDao.for(DataMapResult).findById(saved._id);
-            expect(promise).to.be.fulfilled;
-            expect(promise).to.eventually.be.instanceOf(DataMapResult).and.notify(done);
-          })
-          .catch((err) => {
-            done(err);
-          });
-      });
-
-      it("should get a single object for the passed string id", (done) => {
-        const dmr = new DataMapResult("1");
-        dmr.accountId = "account-id";
-        simpleDao.save(dmr).then((saved) => {
-          const promise = simpleDao.for(DataMapResult).findById(saved._id.toString());
-          expect(promise).to.be.fulfilled;
-          expect(promise).to.eventually.be.instanceOf(DataMapResult).and.notify(done);
-        });
-      });
-
-      it("should return null if can't find it", (done) => {
-        const promise = simpleDao.for(DataMapResult).findById(new ObjectID());
-        expect(promise).to.be.fulfilled;
-        expect(promise).to.eventually.be.null.and.notify(done);
-      });
-    });
-
-    describe(".findOne()", () => {
-      it("should get a single object given a query", (done) => {
-        const dmr = new DataMapResult("1");
-        dmr.accountId = "account-id";
-        simpleDao.save(dmr).then(() => {
-          const promise = simpleDao.for(DataMapResult).findOne({accountId: "account-id"});
-          expect(promise).to.be.fulfilled;
-          expect(promise).to.eventually.be.instanceOf(DataMapResult).and.notify(done);
-        });
-      });
-
-      it("should return null if can't find it", (done) => {
-        const promise = simpleDao.for(DataMapResult).findOne({accountId: new ObjectID().toString()});
-        expect(promise).to.be.fulfilled;
-        expect(promise).to.eventually.be.null.and.notify(done);
-      });
-    });
-
     describe(".find().toArray()", () => {
       it("should call find on the driver, passing the arguments and returning a promise", (done) => {
         const dmr = new DataMapResult("1");
@@ -638,6 +588,56 @@ describe("SimpleDao", () => {
               done(err);
             });
         });
+      });
+    });
+
+    describe(".findOne()", () => {
+      it("should get a single object given a query", (done) => {
+        const dmr = new DataMapResult("1");
+        dmr.accountId = "account-id";
+        simpleDao.save(dmr).then(() => {
+          const promise = simpleDao.for(DataMapResult).findOne({accountId: "account-id"});
+          expect(promise).to.be.fulfilled;
+          expect(promise).to.eventually.be.instanceOf(DataMapResult).and.notify(done);
+        });
+      });
+
+      it("should return null if can't find it", (done) => {
+        const promise = simpleDao.for(DataMapResult).findOne({accountId: new ObjectID().toString()});
+        expect(promise).to.be.fulfilled;
+        expect(promise).to.eventually.be.null.and.notify(done);
+      });
+    });
+
+    describe(".findById()", () => {
+      it("should get a single object for the passed objectId", (done) => {
+        const dmr = new DataMapResult("1");
+        dmr.accountId = "account-id";
+        simpleDao.save(dmr)
+          .then((saved) => {
+            const promise = simpleDao.for(DataMapResult).findById(saved._id);
+            expect(promise).to.be.fulfilled;
+            expect(promise).to.eventually.be.instanceOf(DataMapResult).and.notify(done);
+          })
+          .catch((err) => {
+            done(err);
+          });
+      });
+
+      it("should get a single object for the passed string id", (done) => {
+        const dmr = new DataMapResult("1");
+        dmr.accountId = "account-id";
+        simpleDao.save(dmr).then((saved) => {
+          const promise = simpleDao.for(DataMapResult).findById(saved._id.toString());
+          expect(promise).to.be.fulfilled;
+          expect(promise).to.eventually.be.instanceOf(DataMapResult).and.notify(done);
+        });
+      });
+
+      it("should return null if can't find it", (done) => {
+        const promise = simpleDao.for(DataMapResult).findById(new ObjectID());
+        expect(promise).to.be.fulfilled;
+        expect(promise).to.eventually.be.null.and.notify(done);
       });
     });
 

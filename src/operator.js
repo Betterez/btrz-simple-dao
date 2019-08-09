@@ -48,11 +48,6 @@ class Operator {
     return new InnerCursor(cursor, this.factory);
   }
 
-  findAggregate(query) {
-    const cursorPromised = this.simpleDao.aggregate(this.collectionName, query);
-    return new InnerCursor(cursorPromised, this.factory);
-  }
-
   findOne(query) {
     const factory = this.factory;
     return this
@@ -82,6 +77,12 @@ class Operator {
     }
     return this.findOne({_id: id});
   }
+
+  findAggregate(query) {
+    const cursorPromised = this.simpleDao.aggregate(this.collectionName, query);
+    return new InnerCursor(cursorPromised, this.factory);
+  }
+
 
   update(query, update, options) {
     if (!query) {
