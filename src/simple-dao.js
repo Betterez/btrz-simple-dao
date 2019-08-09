@@ -109,13 +109,15 @@ class SimpleDao {
       return existingConnection;
     }
 
-    this.logInfo("Connecting to Mongo...");
+    const connectionStringWithoutCredentials = this.connectionString.split("@").length > 1 ?
+      this.connectionString.split("@")[1] : this.connectionString.split("@")[0];
+    this.logInfo(`Connecting to Mongo server(s): ${connectionStringWithoutCredentials}`);
 
     try {
-      dbConnections[this.connectionString] = await MongoClient.connect(`mongodb://${this.connectionString}`);
-      const db = dbConnections[this.connectionString];
+      dbConnections[this.connectionString] = MongoClient.connect(`mongodb://${this.connectionString}`);
+      const db = await dbConnections[this.connectionString];
 
-      this.logInfo("Connected to Mongo");
+      this.logInfo(`Connected to Mongo server(s): ${connectionStringWithoutCredentials}`);
 
       db.on("close", (err) => {
         Reflect.deleteProperty(dbConnections, this.connectionString);

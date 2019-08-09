@@ -326,6 +326,24 @@ describe("SimpleDao", () => {
       await simpleDao2.connect();
       expect(connectionStub.callCount).to.eql(1);
     });
+
+    it("should connect to the database only once when multiple database requests arrive while the initial connection is still being " +
+      "established", async () => {
+      // Change which database we are connecting to
+      configForOtherDatabase.db.options.database = "simple_dao_test_6";
+      const simpleDao2 = new SimpleDao(configForOtherDatabase);
+
+      const connectionSpy = sandbox.spy(MongoClient, "connect");
+      expect(connectionSpy.callCount).to.eql(0);
+
+      await Promise.all([
+        simpleDao2.for(Model).find({}),
+        simpleDao2.for(Model).find({}),
+        simpleDao2.for(Model).find({})
+      ]);
+
+      expect(connectionSpy.callCount).to.eql(1);
+    });
   });
 
   // this exists for compatibility with the soon-to-be-removed mongoskin API
