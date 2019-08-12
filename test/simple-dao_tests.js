@@ -594,20 +594,29 @@ describe("SimpleDao", () => {
     });
 
     describe(".findOne()", () => {
-      it("should get a single object given a query", (done) => {
-        const dmr = new DataMapResult("1");
-        dmr.accountId = "account-id";
-        simpleDao.save(dmr).then(() => {
-          const promise = simpleDao.for(DataMapResult).findOne({accountId: "account-id"});
-          expect(promise).to.be.fulfilled;
-          expect(promise).to.eventually.be.instanceOf(DataMapResult).and.notify(done);
-        });
+      it("should return only one object that matches the specified query", async () => {
+        const result = await simpleDao.for(Model).findOne({a: 2});
+        expect(result).to.exist;
+        expect(result.a).to.eql(2);
       });
 
-      it("should return null if can't find it", (done) => {
-        const promise = simpleDao.for(DataMapResult).findOne({accountId: new ObjectID().toString()});
-        expect(promise).to.be.fulfilled;
-        expect(promise).to.eventually.be.null.and.notify(done);
+      it("should return null if there is no document matching the specified query", async () => {
+        const result = await simpleDao.for(Model).findOne({a: 3});
+        expect(result).to.eql(null);
+      });
+
+      it("should return an object that is an instance of the provided class, created via the class' .factory() method", async () => {
+        const factorySpy = sandbox.spy(Model, "factory");
+        expect(factorySpy.callCount).to.eql(0);
+
+        const result = await simpleDao.for(Model).findOne({});
+        expect(result).to.exist;
+        expect(result).to.be.an.instanceOf(Model);
+        expect(factorySpy.callCount).to.eql(1);
+      });
+
+      it("should reject if there was an error performing the query", async () => {
+        return expect(simpleDao.for(Model).findOne({a: {$badOperator: 0}})).to.eventually.be.rejectedWith("unknown operator");
       });
     });
 
