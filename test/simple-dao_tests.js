@@ -698,69 +698,37 @@ describe("SimpleDao", () => {
     });
 
     describe(".update()", () => {
-      it("should throw if there is no query", () => {
-        function sut() {
-          simpleDao.for(DataMapResult).update();
-        }
-        expect(sut).to.throw("query can't be undefined or null");
+      it("should reject if no query is provided", async () => {
+        return expect(simpleDao.for(Model).update()).to.be.rejectedWith("query can't be undefined or null");
       });
 
-      it("should throw if there is no update param", () => {
-        function sut() {
-          simpleDao.for(DataMapResult).update({});
-        }
-        expect(sut).to.throw("update can't be undefined or null");
+      it("should reject if no update parameter is provided", async () => {
+        return expect(simpleDao.for(Model).update({})).to.be.rejectedWith("Error: update can't be undefined or null");
       });
 
-      it("should update a single object given a query and update param", (done) => {
-        const dmr = new DataMapResult("1");
-        dmr.accountId = "account-id";
-        dmr.status = "new";
-        simpleDao.save(dmr).then(() => {
-          const promise = simpleDao.for(DataMapResult)
-            .update({accountId: "account-id"}, {$set: {status: "old"}});
-          promise.then((updatedDocument) => {
-            expect(updatedDocument.ok).to.be.ok;
-            expect(updatedDocument.n).to.be.eql(1);
-            expect(updatedDocument.updatedExisting).to.be.ok;
-            done();
-          })
-            .catch((err) => { done(err); });
-        });
+      it("should update only one document by default", async () => {
+        const result = await simpleDao.for(Model).update({}, {$set: {a: 5}});
+        expect(result).to.deep.eql({n: 1, nModified: 1, ok: 1, updatedExisting: true});
       });
 
-      it("should update a single object given a query, update param and options", (done) => {
-        let dmr = new DataMapResult("45");
-        dmr.accountId = "account-id-123";
-        dmr.status = "new";
-        simpleDao.save(dmr).then(() => {
-          dmr = new DataMapResult("52");
-          dmr.accountId = "account-id-123";
-          dmr.status = "new";
-          simpleDao.save(dmr).then(() => {
-            const promise = simpleDao.for(DataMapResult).update({accountId: "account-id-123"}, {$set: {status: "old"}}, {multi: true});
-            promise.then((updatedDocument) => {
-              expect(updatedDocument.ok).to.be.ok;
-              expect(updatedDocument.n).to.be.eql(2);
-              expect(updatedDocument.updatedExisting).to.be.ok;
-              done();
-            }).catch((err) => { done(err); });
-          });
-        });
+      it("should update multiple documents when the `multi: true` option is provided", async () => {
+        const result = await simpleDao.for(Model).update({}, {$set: {a: 5}}, {multi: true});
+        expect(result).to.deep.eql({n: 3, nModified: 3, ok: 1, updatedExisting: true});
       });
 
-      it("should return not updates if query not match", (done) => {
-        const dmr = new DataMapResult("1");
-        dmr.accountId = "account-id";
-        dmr.status = "new";
-        simpleDao.save(dmr).then(() => {
-          const promise = simpleDao.for(DataMapResult).update({accountId: "not-existing"}, {status: "old"});
-          promise.then((updatedDocument) => {
-            expect(updatedDocument.ok).to.be.ok;
-            expect(updatedDocument.n).to.be.eql(0);
-            done();
-          }).catch((err) => { done(err); });
-        });
+      it("should not update anything if the provided query matches no documents", async () => {
+        const result = await simpleDao.for(Model).update({b: 1}, {$set: {a: 5}});
+        expect(result).to.deep.eql({n: 0, nModified: 0, ok: 1, updatedExisting: false});
+      });
+
+      it("should reject if the update operation is invalid", async () => {
+        return expect(simpleDao.for(Model).update({b: 1}, {$badOperator: {a: 5}}))
+          .to.be.rejectedWith("Unknown modifier");
+      });
+
+      it("should reject if an error was encountered when connecting to the database", async () => {
+        sandbox.stub(simpleDao, "connect").rejects(new Error("Some connection error"));
+        await expect(simpleDao.for(Model).update({}, {$set: {a: 5}})).to.eventually.be.rejectedWith("Some connection error");
       });
     });
 
