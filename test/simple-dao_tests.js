@@ -10,7 +10,6 @@ const sandbox = sinon.createSandbox();
 const {ALL_AUTH_MECHANISMS, ALL_READ_PREFERENCES} = require("../constants");
 const SimpleDao = require("../").SimpleDao;
 const {getConnectionString} = require("../src/simple-dao");
-const DataMapResult = require("./data-map-result").DataMapResult;
 
 
 async function databaseHasCollection(db, collectionName) {
@@ -65,16 +64,6 @@ describe("SimpleDao", () => {
     try {
       await db.dropCollection(collectionName);
     } catch (err) {}
-  });
-
-  after(async () => {
-    const db = await simpleDao.connect();
-    const databaseHasDatamapCollection = await databaseHasCollection(db, "datamapresult");
-
-    // When running only part of the test suite using .only, this collection may not exist.  Don't try to drop it if it doesn't exist.
-    if (databaseHasDatamapCollection) {
-      return simpleDao.dropCollection("datamapresult");
-    }
   });
 
   describe(".objectId()", () => {
@@ -811,61 +800,31 @@ describe("SimpleDao", () => {
     });
 
     describe(".distinct()", () => {
-      beforeEach((done) => {
-        const dmr = new DataMapResult("1");
-        dmr.field = "A";
-        dmr.accountId = "1";
-        simpleDao.save(dmr).then(() => {
-          const dmr2 = new DataMapResult("2");
-          dmr2.field = "B";
-          dmr2.accountId = "1";
-          simpleDao.save(dmr2).then(() => {
-            const dmr3 = new DataMapResult("3");
-            dmr3.field = "A";
-            dmr3.accountId = "1";
-            simpleDao.save(dmr3).then(() => {
-              const dmr4 = new DataMapResult("4");
-              dmr4.field = "C";
-              dmr4.accountId = "2";
-              simpleDao.save(dmr4).then(() => {
-                done();
-              });
-            });
-          });
-        });
+      it("should return an empty array when no field is provided", async () => {
+        const results = await simpleDao.for(Model).distinct();
+        expect(results).to.deep.eql([]);
       });
 
-      it("should not return values", (done) => {
-        const promise = simpleDao.for(DataMapResult).distinct();
-        promise.then((results) => {
-          expect(results).to.be.an("array");
-          expect(results.length).to.be.eql(0);
-          done();
-        }).catch((err) => { done(err); });
+      it("should return all distinct values for the provided field when no query is specified", async () => {
+        const results = await simpleDao.for(Model).distinct("a");
+        expect(results).to.deep.eql([1, 2]);
       });
 
-      it("should return the distinct values for field with no query", (done) => {
-        const promise = simpleDao.for(DataMapResult).distinct("field");
-        promise.then((results) => {
-          expect(results).to.be.an("array");
-          expect(results.length).to.be.eql(3);
-          expect(results[0]).to.be.eql("A");
-          expect(results[1]).to.be.eql("B");
-          expect(results[2]).to.be.eql("C");
-          done();
-        }).catch((err) => { done(err); });
+      it("should return the distinct values for the provided field amongst all documents that match the provided query", async () => {
+        const modelFour = Model.factory({a: 3});
+        await simpleDao.save(modelFour);
+        const results = await simpleDao.for(Model).distinct("a", {a: {$gt: 1}});
+        expect(results).to.deep.eql([2, 3]);
       });
 
-      it("should return the distinct values for the field with the given query", (done) => {
-        const query = {accountId: "1"};
-        const promise = simpleDao.for(DataMapResult).distinct("field", query);
-        promise.then((results) => {
-          expect(results).to.be.an("array");
-          expect(results.length).to.be.eql(2);
-          expect(results[0]).to.be.eql("A");
-          expect(results[1]).to.be.eql("B");
-          done();
-        }).catch((err) => { done(err); });
+      it("should reject if the query is invalid", async () => {
+        return expect(simpleDao.for(Model).distinct("a", {$badOperator: 1}))
+          .to.be.rejectedWith("unknown top level operator");
+      });
+
+      it("should reject if an error was encountered when connecting to the database", async () => {
+        sandbox.stub(simpleDao, "connect").rejects(new Error("Some connection error"));
+        await expect(simpleDao.for(Model).distinct("a")).to.eventually.be.rejectedWith("Some connection error");
       });
     });
   });
