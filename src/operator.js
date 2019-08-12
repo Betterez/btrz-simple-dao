@@ -115,7 +115,7 @@ class Operator {
         return collection.distinct(field || "", query || {});
       })
       .catch((err) => {
-        this.simpleDao.logError("operator removeById connect", err);
+        this.simpleDao.logError("SimpleDao: Error performing distinct", err);
         throw err;
       });
   }
