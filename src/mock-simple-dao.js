@@ -1,4 +1,3 @@
-
 const {objectId} = require("./simple-dao").SimpleDao;
 const InnerCursor = require("./inner-cursor").InnerCursor;
 
