@@ -733,52 +733,42 @@ describe("SimpleDao", () => {
     });
 
     describe(".remove()", () => {
-      const dataMapId = "something";
-      const dmr1 = new DataMapResult(dataMapId);
-      const dmr2 = new DataMapResult(dataMapId);
-      const dmr3 = new DataMapResult("another");
+      it("should remove all documents that match the provided query", async () => {
+        const db = await simpleDao.connect();
 
-      afterEach(() => {
-        return simpleDao.for(DataMapResult).remove({});
+        const query = {a: 2};
+        const documentsPriorToRemoval = await db.collection(collectionName).find(query).toArray();
+        expect(documentsPriorToRemoval).to.have.length(2);
+
+        const result = await simpleDao.for(Model).remove(query);
+        expect(result).to.deep.eql({n: 2, ok: 1});
+
+        const documentsAfterRemoval = await db.collection(collectionName).find(query).toArray();
+        expect(documentsAfterRemoval.length).to.eql(0);
       });
 
-      it("should remove a single object for the passed objectId", (done) => {
-        simpleDao.save(dmr1).then((saved) => {
-            const promise = simpleDao.for(DataMapResult).remove({_id: saved._id});
-            expect(promise).to.eventually.deep.equal({ok: 1, n: 1}).and.notify(done);
-          })
-          .catch(done);
+      it("should remove no documents if the provided query matches no documents", async () => {
+        const db = await simpleDao.connect();
+
+        const allDocumentsInCollectionPriorToRemoval = await db.collection(collectionName).find({}).toArray();
+        expect(allDocumentsInCollectionPriorToRemoval).to.have.length(3);
+
+        const query = {a: 5};
+        const result = await simpleDao.for(Model).remove(query);
+        expect(result).to.deep.eql({n: 0, ok: 1});
+
+        const allDocumentsInCollectionAfterRemoval = await db.collection(collectionName).find({}).toArray();
+        expect(allDocumentsInCollectionAfterRemoval.length).to.eql(3);
       });
 
-      it("should remove several objects with the passed query", (done) => {
-        Promise.all([
-            simpleDao.save(dmr1),
-            simpleDao.save(dmr2),
-            simpleDao.save(dmr3)
-          ])
-          .then(() => {
-            const promise = simpleDao.for(DataMapResult).remove({dataMapId});
-            expect(promise).to.eventually.deep.equal({ok: 1, n: 2}).and.notify(done);
-          })
-          .catch(done);
+      it("should reject if the query is invalid", async () => {
+        return expect(simpleDao.for(Model).remove({$badOperator: 1}))
+          .to.be.rejectedWith("unknown top level operator");
       });
 
-      it("should remove all objects if the passed query is empty", (done) => {
-        Promise.all([
-            simpleDao.save(dmr1),
-            simpleDao.save(dmr2),
-            simpleDao.save(dmr3)
-          ])
-          .then(() => {
-            const promise = simpleDao.for(DataMapResult).remove({});
-            expect(promise).to.eventually.deep.equal({ok: 1, n: 3}).and.notify(done);
-          })
-          .catch(done);
-      });
-
-      it("should return 0 count if can't find it", (done) => {
-        const promise = simpleDao.for(DataMapResult).remove({_id: new ObjectID()});
-        expect(promise).to.eventually.deep.equal({ok: 1, n: 0}).and.notify(done);
+      it("should reject if an error was encountered when connecting to the database", async () => {
+        sandbox.stub(simpleDao, "connect").rejects(new Error("Some connection error"));
+        await expect(simpleDao.for(Model).remove({})).to.eventually.be.rejectedWith("Some connection error");
       });
     });
 

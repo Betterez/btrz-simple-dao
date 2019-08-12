@@ -96,7 +96,7 @@ class Operator {
         return result.result;
       })
       .catch((err) => {
-        this.simpleDao.logError("operator remove", err);
+        this.simpleDao.logError("SimpleDao: Error performing remove", err);
         throw err;
       });
   }
