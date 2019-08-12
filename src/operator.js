@@ -81,24 +81,19 @@ class Operator {
     }
   }
 
-  remove(query) {
+  async remove(query) {
     if (!query) {
       throw new Error("query can't be undefined or null");
     }
-    return this
-      .simpleDao
-      .connect()
-      .then((db) => {
-        const collection = db.collection(this.collectionName);
-        return collection.remove(query);
-      })
-      .then((result) => {
-        return result.result;
-      })
-      .catch((err) => {
-        this.simpleDao.logError("SimpleDao: Error performing remove", err);
-        throw err;
-      });
+
+    try {
+      const db = await this.simpleDao.connect();
+      const result = await db.collection(this.collectionName).remove(query);
+      return result.result;
+    } catch (err) {
+      this.simpleDao.logError("SimpleDao: Error performing remove", err);
+      throw err;
+    }
   }
 
   removeById(id, options) {
