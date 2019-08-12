@@ -106,18 +106,15 @@ class Operator {
     return this.remove({_id});
   }
 
-  distinct(field, query) {
-    return this
-      .simpleDao
-      .connect()
-      .then((db) => {
-        const collection = db.collection(this.collectionName);
-        return collection.distinct(field || "", query || {});
-      })
-      .catch((err) => {
-        this.simpleDao.logError("SimpleDao: Error performing distinct", err);
-        throw err;
-      });
+  async distinct(field, query) {
+    try {
+      const db = await this.simpleDao.connect();
+      const collection = db.collection(this.collectionName);
+      return collection.distinct(field || "", query || {});
+    } catch (err) {
+      this.simpleDao.logError("SimpleDao: Error performing distinct", err);
+      throw err;
+    }
   }
 }
 
