@@ -19,6 +19,18 @@ describe("Mock SimpleDao", () => {
   let simpleDao; let
     source;
 
+
+  class Model {
+    static collectionName() {
+      return "some_collection";
+    }
+
+    static factory(literal) {
+      return Object.assign(new Model(), literal);
+    }
+  }
+
+
   beforeEach(() => {
     simpleDao = new SimpleDao(config);
     source = {
@@ -36,12 +48,11 @@ describe("Mock SimpleDao", () => {
   // this tests the mock contains the same api that simple-dao,
   // then if we add any method to simple-dao it should be reflected in the mock dao
   it("should use the simple-dao api", () => {
-    const DataMapResult = require("./data-map-result").DataMapResult;
     const daoMethods = Object.getOwnPropertyNames(Object.getPrototypeOf(simpleDao))
       .filter((method) => {
         return excludedMethods.indexOf(method) === -1 && typeof simpleDao[method] === "function";
       });
-    const operator = simpleDao.for(DataMapResult);
+    const operator = simpleDao.for(Model);
     const operatorMethods = Object.getOwnPropertyNames(Object.getPrototypeOf(operator))
       .filter((method) => {
         return excludedMethods.indexOf(method) === -1 && typeof operator[method] === "function";
