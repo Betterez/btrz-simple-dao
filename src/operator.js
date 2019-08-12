@@ -35,23 +35,15 @@ class Operator {
     return new InnerCursor(cursor, this.factory);
   }
 
-  findOne(query) {
-    const factory = this.factory;
-    return this
-      .simpleDao
-      .connect()
-      .then((db) => {
-        return db
-          .collection(this.collectionName)
-          .findOne(query)
-          .then((model) => {
-            return model ? utils.buildModel(factory)(model) : model;
-          });
-      })
-      .catch((err) => {
-        this.simpleDao.logError("SimpleDao: Error performing findOne", err);
-        throw err;
-      });
+  async findOne(query) {
+    try {
+      const db = await this.simpleDao.connect();
+      const model = await db.collection(this.collectionName).findOne(query);
+      return model && this.factory(model);
+    } catch (err) {
+      this.simpleDao.logError("SimpleDao: Error performing findOne", err);
+      throw err;
+    }
   }
 
   findById(id) {
