@@ -659,24 +659,40 @@ describe("SimpleDao", () => {
     });
 
     describe(".findAggregate()", () => {
-      it("should call aggregate on the dao, passing the arguments and returning a cursor", (done) => {
-        const dmr = new DataMapResult("1");
-        dmr.accountId = "account-id";
-        simpleDao.save(dmr).then(() => {
-          const query = [
-            {$match: {accountId: "account-id"}},
-            {$group: {_id: "$accountId", totalPop: {$sum: "$dataMapId"}}}
-          ];
-          simpleDao.for(DataMapResult)
-            .findAggregate(query)
-            .toCursor()
-            .then((cursor) => {
-              expect(cursor.next).to.be.a("function");
-              done();
-            })
-            .catch((err) => {
-              done(err);
-            });
+      describe(".toArray()", () => {
+        it("should return an array of all documents produced by the specified aggregate query", async () => {
+          const query = {$group: {_id: 1, total: {$sum: "$a"}}};
+          const result = await simpleDao.for(Model).findAggregate(query).toArray();
+          expect(result).to.deep.eql([{_id: 1, total: 5}]);
+        });
+
+        it("should return an array of objects that are instances of the provided class, " +
+          "created via the class' .factory() method", async () => {
+          const factorySpy = sandbox.spy(Model, "factory");
+          expect(factorySpy.callCount).to.eql(0);
+
+          const results = await simpleDao.for(Model).findAggregate({$group: {_id: 1, total: {$sum: "$a"}}}).toArray();
+          expect(results).to.have.length.gt(0);
+          expect(factorySpy.callCount).to.eql(results.length);
+
+          for (const data of results) {
+            expect(data).to.be.an.instanceOf(Model);
+          }
+        });
+
+        it("should reject if there was an error performing the query", async () => {
+          return expect(simpleDao.for(Model).findAggregate({a: {$badOperator: 0}}).toArray())
+            .to.eventually.be.rejectedWith("Unrecognized pipeline stage name");
+        });
+      });
+
+      describe(".toCursor()", () => {
+        it("should return a cursor for all documents produced by the specified aggregate query", async () => {
+          const cursor = await simpleDao.for(Model).findAggregate({$match: {a: {$gt: 0}}}).toCursor();
+          expect(cursor.constructor.name).to.eql("AggregationCursor");
+
+          const results = await cursor.toArray();
+          expect(results).to.have.length(3);
         });
       });
     });

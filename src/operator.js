@@ -61,7 +61,6 @@ class Operator {
     return new InnerCursor(cursorPromised, this.factory);
   }
 
-
   update(query, update, options) {
     if (!query) {
       throw new Error("query can't be undefined or null");
