@@ -1,6 +1,5 @@
 const InnerCursor = require("./inner-cursor").InnerCursor;
 const ObjectID = require("mongodb").ObjectID;
-const utils = require("./utils");
 
 
 class Operator {
