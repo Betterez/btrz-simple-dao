@@ -621,34 +621,40 @@ describe("SimpleDao", () => {
     });
 
     describe(".findById()", () => {
-      it("should get a single object for the passed objectId", (done) => {
-        const dmr = new DataMapResult("1");
-        dmr.accountId = "account-id";
-        simpleDao.save(dmr)
-          .then((saved) => {
-            const promise = simpleDao.for(DataMapResult).findById(saved._id);
-            expect(promise).to.be.fulfilled;
-            expect(promise).to.eventually.be.instanceOf(DataMapResult).and.notify(done);
-          })
-          .catch((err) => {
-            done(err);
-          });
-      });
-
-      it("should get a single object for the passed string id", (done) => {
-        const dmr = new DataMapResult("1");
-        dmr.accountId = "account-id";
-        simpleDao.save(dmr).then((saved) => {
-          const promise = simpleDao.for(DataMapResult).findById(saved._id.toString());
-          expect(promise).to.be.fulfilled;
-          expect(promise).to.eventually.be.instanceOf(DataMapResult).and.notify(done);
+      context("when the provided 'id' is an Object ID", () => {
+        it("should return the single object that has the specified id", async () => {
+          const result = await simpleDao.for(Model).findById(modelOne._id);
+          expect(result).to.exist;
+          expect(result._id.toString()).to.eql(modelOne._id.toString());
         });
       });
 
-      it("should return null if can't find it", (done) => {
-        const promise = simpleDao.for(DataMapResult).findById(new ObjectID());
-        expect(promise).to.be.fulfilled;
-        expect(promise).to.eventually.be.null.and.notify(done);
+      context("when the provided 'id' is a string", () => {
+        it("should return the single object that has the specified id", async () => {
+          const result = await simpleDao.for(Model).findById(modelOne._id.toString());
+          expect(result).to.exist;
+          expect(result._id.toString()).to.eql(modelOne._id.toString());
+        });
+
+        it("should reject if the provided string is not a valid Object ID", async () => {
+          return expect(simpleDao.for(Model).findById("1")).to.eventually.be
+            .rejectedWith("Argument passed in must be a single String of 12 bytes or a string of 24 hex characters");
+        });
+      });
+
+      it("should return an object that is an instance of the provided class, created via the class' .factory() method", async () => {
+        const factorySpy = sandbox.spy(Model, "factory");
+        expect(factorySpy.callCount).to.eql(0);
+
+        const result = await simpleDao.for(Model).findById(modelOne._id);
+        expect(result).to.exist;
+        expect(result).to.be.an.instanceOf(Model);
+        expect(factorySpy.callCount).to.eql(1);
+      });
+
+      it("should return null if there is no document with the specified id", async () => {
+        const result = await simpleDao.for(Model).findById(new ObjectID());
+        expect(result).to.eql(null);
       });
     });
 
