@@ -35,6 +35,12 @@ describe("SimpleDao", () => {
     }
   }
 
+  async function expectDocumentDoesNotExist(id, _collectionName = collectionName) {
+    const db = await simpleDao.connect();
+    const document = await db.collection(_collectionName).findOne({_id: id});
+    expect(document).to.not.exist;
+  }
+
   beforeEach(() => {
     config = {
       db: {
@@ -777,31 +783,30 @@ describe("SimpleDao", () => {
     });
 
     describe(".removeById()", () => {
-      it("should remove a single object for the passed objectId", (done) => {
-        const dmr = new DataMapResult("1");
-        simpleDao.save(dmr).then((saved) => {
-          const promise = simpleDao.for(DataMapResult).removeById(saved._id);
-          expect(promise).to.be.fulfilled;
-          expect(promise).to.eventually.deep.equal({ok: 1, n: 1}).and.notify(done);
-        })
-          .catch((err) => {
-            done(err);
-          });
-      });
-
-      it("should remove a single object for the passed string id", (done) => {
-        const dmr = new DataMapResult("1");
-        simpleDao.save(dmr).then((saved) => {
-          const promise = simpleDao.for(DataMapResult).removeById(saved._id.toString());
-          expect(promise).to.be.fulfilled;
-          expect(promise).to.eventually.deep.equal({ok: 1, n: 1}).and.notify(done);
+      context("when the provided 'id' is an Object ID", () => {
+        it("should remove the single document that has the specified id", async () => {
+          const result = await simpleDao.for(Model).removeById(modelOne._id);
+          expect(result).to.deep.eql({n: 1, ok: 1});
+          await expectDocumentDoesNotExist(modelOne._id);
         });
       });
 
-      it("should return 0 count if can't find it", (done) => {
-        const promise = simpleDao.for(DataMapResult).removeById(new ObjectID());
-        expect(promise).to.be.fulfilled;
-        expect(promise).to.eventually.deep.equal({ok: 1, n: 0}).and.notify(done);
+      context("when the provided 'id' is a string", () => {
+        it("should remove the single document that has the specified id", async () => {
+          const result = await simpleDao.for(Model).removeById(modelOne._id.toString());
+          expect(result).to.deep.eql({n: 1, ok: 1});
+          await expectDocumentDoesNotExist(modelOne._id);
+        });
+
+        it("should reject if the provided string is not a valid Object ID", async () => {
+          return expect(simpleDao.for(Model).removeById("1")).to.eventually.be
+            .rejectedWith("Argument passed in must be a single String of 12 bytes or a string of 24 hex characters");
+        });
+      });
+
+      it("should do nothing if there is no document with the specified id", async () => {
+        const result = await simpleDao.for(Model).removeById(new ObjectID());
+        expect(result).to.deep.eql({n: 0, ok: 1});
       });
     });
 
