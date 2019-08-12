@@ -60,7 +60,7 @@ class Operator {
     return new InnerCursor(cursorPromised, this.factory);
   }
 
-  update(query, update, options) {
+  async update(query, update, options) {
     if (!query) {
       throw new Error("query can't be undefined or null");
     }
@@ -68,26 +68,17 @@ class Operator {
       throw new Error("update can't be undefined or null");
     }
 
-    return this
-      .simpleDao
-      .connect()
-      .then((db) => {
-        const collection = db.collection(this.collectionName);
-        return collection.update(query, update, options || {})
-          .then((result) => {
-            const endResult = result.result;
-            endResult.updatedExisting = endResult.nModified > 0;
-            return endResult;
-          })
-          .catch((err) => {
-            this.simpleDao.logError("operator update", err);
-            throw err;
-          });
-      })
-      .catch((err) => {
-        this.simpleDao.logError("operator update connect", err);
-        throw err;
-      });
+    try {
+      const db = await this.simpleDao.connect();
+      const collection = db.collection(this.collectionName);
+      const result = await collection.update(query, update, options || {});
+      const endResult = result.result;
+      endResult.updatedExisting = endResult.nModified > 0;
+      return endResult;
+    } catch (err) {
+      this.simpleDao.logError("SimpleDao: Error performing update", err);
+      throw err;
+    }
   }
 
   remove(query) {
