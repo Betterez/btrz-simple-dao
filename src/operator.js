@@ -46,15 +46,14 @@ class Operator {
     }
   }
 
-  findById(id) {
-    try {
-      if (typeof id === "string") {
-        id = new ObjectID(id);
-      }
-    } catch (err) {
-      throw err;
+  async findById(id) {
+    let _id = id;
+
+    if (typeof id === "string") {
+      _id = new ObjectID(id);
     }
-    return this.findOne({_id: id});
+
+    return this.findOne({_id});
   }
 
   findAggregate(query) {
