@@ -49,7 +49,7 @@ class Operator {
           });
       })
       .catch((err) => {
-        this.simpleDao.logError("operator findOne", err);
+        this.simpleDao.logError("SimpleDao: Error performing findOne", err);
         throw err;
       });
   }
