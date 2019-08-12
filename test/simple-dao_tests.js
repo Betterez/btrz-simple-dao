@@ -761,8 +761,8 @@ describe("SimpleDao", () => {
         expect(allDocumentsInCollectionAfterRemoval.length).to.eql(3);
       });
 
-      it("should throw an error if no query is provided", async () => {
-        expect(() => simpleDao.for(Model).remove()).to.throw("query can't be undefined or null");
+      it("should reject if no query is provided", async () => {
+        return expect(simpleDao.for(Model).remove()).to.be.rejectedWith("query can't be undefined or null");
       });
 
       it("should reject if the query is invalid", async () => {
