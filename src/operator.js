@@ -96,11 +96,14 @@ class Operator {
     }
   }
 
-  removeById(id, options) {
+  async removeById(id) {
+    let _id = id;
+
     if (typeof id === "string") {
-      id = new ObjectID(id);
+      _id = new ObjectID(id);
     }
-    return this.remove({_id: id});
+
+    return this.remove({_id});
   }
 
   distinct(field, query) {
