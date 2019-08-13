@@ -15,9 +15,9 @@ describe("Mock SimpleDao", () => {
       uris: ["127.0.0.1:27017"]
     }
   };
-  const excludedMethods = ["constructor", "connect", "logError", "logInfo", "collectionNames", "dropCollection"];
-  let simpleDao; let
-    source;
+  const excludedMethods = ["constructor", "_getMongoClient", "connect", "logError", "logInfo", "dropCollection"];
+  let simpleDao = null;
+  let source = null;
 
 
   class Model {
