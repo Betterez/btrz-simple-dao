@@ -93,7 +93,7 @@ describe("SimpleDao", () => {
   describe("getConnectionString()", () => {
     it("should return a valid connection string for one db server", () => {
       const connectionString = getConnectionString(config.db);
-      expect(connectionString).to.eql("127.0.0.1:27017/simple_dao_test?authMechanism=DEFAULT");
+      expect(connectionString).to.eql("mongodb://127.0.0.1:27017/simple_dao_test?authMechanism=DEFAULT");
     });
 
     it("should return a valid connection string for one db server using authentication credentials", () => {
@@ -108,7 +108,24 @@ describe("SimpleDao", () => {
         }
       };
       const connectionString = getConnectionString(config.db);
-      expect(connectionString).to.eql("usr:pwd@127.0.0.1:27017/simple_dao_test?authMechanism=DEFAULT");
+      expect(connectionString).to.eql("mongodb://usr:pwd@127.0.0.1:27017/simple_dao_test?authMechanism=DEFAULT");
+    });
+
+    it("should URL-encode the authentication credentials " +
+      "so that credentials that include symbols will not result in invalid connection strings", () => {
+      const config = {
+        db: {
+          options: {
+            database: "simple_dao_test",
+            username: "u$ername",
+            password: "pa$$w{}rd"
+          },
+          uris: ["127.0.0.1:27017"]
+        }
+      };
+      const connectionString = getConnectionString(config.db);
+      expect(connectionString)
+        .to.eql("mongodb://u%24ername:pa%24%24w%7B%7Drd@127.0.0.1:27017/simple_dao_test?authMechanism=DEFAULT");
     });
 
     it("should return a valid connection string for many db servers using authentication credentials", () => {
@@ -126,7 +143,7 @@ describe("SimpleDao", () => {
         }
       };
       const connectionString = getConnectionString(config.db);
-      expect(connectionString).to.eql("usr:pwd@127.0.0.1:27017,127.0.0.2:27018/simple_dao_test?authMechanism=DEFAULT");
+      expect(connectionString).to.eql("mongodb://usr:pwd@127.0.0.1:27017,127.0.0.2:27018/simple_dao_test?authMechanism=DEFAULT");
     });
 
     it("should return a valid connection string that includes the specified authentication mechanism", () => {
@@ -143,7 +160,7 @@ describe("SimpleDao", () => {
           }
         };
         const connectionString = getConnectionString(config.db);
-        expect(connectionString).to.eql(`usr:pwd@127.0.0.1:27017/simple_dao_test?authMechanism=${authMechanism}`);
+        expect(connectionString).to.eql(`mongodb://usr:pwd@127.0.0.1:27017/simple_dao_test?authMechanism=${authMechanism}`);
       }
     });
 
@@ -177,7 +194,8 @@ describe("SimpleDao", () => {
           }
         };
         const connectionString = getConnectionString(config.db);
-        expect(connectionString).to.eql(`usr:pwd@127.0.0.1:27017/simple_dao_test?authMechanism=DEFAULT&readPreference=${readPreference}`);
+        expect(connectionString)
+          .to.eql(`mongodb://usr:pwd@127.0.0.1:27017/simple_dao_test?authMechanism=DEFAULT&readPreference=${readPreference}`);
       }
     });
 
@@ -210,9 +228,8 @@ describe("SimpleDao", () => {
         }
       };
       const connectionString = getConnectionString(config.db);
-      expect(connectionString).to.eql(
-        `usr:pwd@127.0.0.1:27017/simple_dao_test?authMechanism=DEFAULT&replicaSet=${config.db.options.replicaSet}`
-      );
+      expect(connectionString)
+        .to.eql(`mongodb://usr:pwd@127.0.0.1:27017/simple_dao_test?authMechanism=DEFAULT&replicaSet=${config.db.options.replicaSet}`);
     });
   });
 
@@ -232,11 +249,8 @@ describe("SimpleDao", () => {
       };
     });
 
-    afterEach(() => {
-
-    });
-
     it("should connect to the database and return an object that allows operations on the specified database", async () => {
+      console.log(simpleDao.connectionString);
       const db = await simpleDao.connect();
       expect(db.databaseName).to.eql(config.db.options.database);
       const result = await db.collection("test_collection").insertOne({test: true});
@@ -290,7 +304,9 @@ describe("SimpleDao", () => {
 
       // Close the database connection.
       // The next time we try to connect, we expect the simpleDao to form a new connection to the database.
-      dbConnection2.close();
+      const client = await simpleDao2._getMongoClient();
+      await client.close();
+
       const dbConnection3 = await simpleDao2.connect();
       expect(dbConnection2 === dbConnection3).to.be.false;
       expect(connectionSpy.callCount).to.eql(2);
@@ -376,7 +392,6 @@ describe("SimpleDao", () => {
         gs.open((err, gsx) => {
           gs.seek(0, () => {
             gs.read((err, readData) => {
-              db.close();
               expect(data.toString("base64")).to.eq(readData.toString("base64"));
               done();
             });
@@ -807,14 +822,14 @@ describe("SimpleDao", () => {
 
       it("should return all distinct values for the provided field when no query is specified", async () => {
         const results = await simpleDao.for(Model).distinct("a");
-        expect(results).to.deep.eql([1, 2]);
+        expect(results).to.be.an("array").that.includes.members([1, 2]);
       });
 
       it("should return the distinct values for the provided field amongst all documents that match the provided query", async () => {
         const modelFour = Model.factory({a: 3});
         await simpleDao.save(modelFour);
         const results = await simpleDao.for(Model).distinct("a", {a: {$gt: 1}});
-        expect(results).to.deep.eql([2, 3]);
+        expect(results).to.be.an("array").that.includes.members([2, 3]);
       });
 
       it("should reject if the query is invalid", async () => {

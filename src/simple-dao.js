@@ -31,10 +31,10 @@ function getAuthMechanism(dbConfig) {
 }
 
 function getConnectionString(dbConfig) {
-  let connectionString = "";
+  let connectionString = "mongodb://";
 
   if (dbConfig.options.username.length > 0) {
-    connectionString += `${dbConfig.options.username}:${dbConfig.options.password}@`;
+    connectionString += `${encodeURIComponent(dbConfig.options.username)}:${encodeURIComponent(dbConfig.options.password)}@`;
   }
 
   const dbHostUris = dbConfig.uris.join(",");
@@ -66,7 +66,7 @@ function getCollectionName(ctrFunc) {
 }
 
 // A collection of all connections to the DB, keyed by the connection string that was used to connect
-const dbConnections = {};
+const mongoClients = {};
 
 
 class SimpleDao {
@@ -100,11 +100,11 @@ class SimpleDao {
     return SimpleDao.objectId(id);
   }
 
-  async connect() {
-    const existingConnection = dbConnections[this.connectionString];
+  async _getMongoClient() {
+    const existingClient = mongoClients[this.connectionString];
 
-    if (existingConnection) {
-      return existingConnection;
+    if (existingClient) {
+      return existingClient;
     }
 
     const connectionStringWithoutCredentials = this.connectionString.split("@").length > 1 ?
@@ -112,23 +112,29 @@ class SimpleDao {
     this.logInfo(`Connecting to Mongo server(s): ${connectionStringWithoutCredentials}`);
 
     try {
-      dbConnections[this.connectionString] = MongoClient.connect(`mongodb://${this.connectionString}`);
-      const db = await dbConnections[this.connectionString];
+      mongoClients[this.connectionString] = MongoClient.connect(this.connectionString);
+      const client = await mongoClients[this.connectionString];
 
-      this.logInfo(`Connected to Mongo server(s): ${connectionStringWithoutCredentials}`);
-
-      db.on("close", (err) => {
-        Reflect.deleteProperty(dbConnections, this.connectionString);
+      client.on("close", (err) => {
+        Reflect.deleteProperty(mongoClients, this.connectionString);
         this.logError("Connection to Mongo unexpectedly closed", err);
       });
 
-      db.gridfs = () => { return this.gridfs(db); };
-      return db;
+      this.logInfo(`Connected to Mongo server(s): ${connectionStringWithoutCredentials}`);
+      return client;
     } catch (err) {
-      Reflect.deleteProperty(dbConnections, this.connectionString);
+      Reflect.deleteProperty(mongoClients, this.connectionString);
       this.logError("Failed to connect to Mongo", err);
       throw err;
     }
+  }
+
+  async connect() {
+    const client = await this._getMongoClient(this.connectionString);
+    // Use the database specified in the connection string
+    const db = client.db();
+    db.gridfs = () => this.gridfs(db);
+    return db;
   }
 
   // this exists for compatibility with the soon-to-be-removed mongoskin API
