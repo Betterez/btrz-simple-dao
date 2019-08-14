@@ -423,6 +423,27 @@ describe("SimpleDao", () => {
     });
   });
 
+  describe(".collectionNames()", () => {
+    let db = null;
+
+    beforeEach(async () => {
+      db = await simpleDao.connect();
+      await db.dropDatabase();
+    });
+
+    it("should return an empty array if there are no collections in the database", async () => {
+      const collectionNames = await simpleDao.collectionNames();
+      expect(collectionNames).to.eql([]);
+    });
+
+    it("should return a list of all collection names in the database", async () => {
+      await db.collection("collection_1").insert({});
+      await db.collection("collection_2").insert({});
+      const collectionNames = await simpleDao.collectionNames();
+      expect(collectionNames).to.be.an("array").that.includes.members(["collection_1", "collection_2"]);
+    });
+  });
+
   describe(".dropCollection()", () => {
     it("should drop the specified collection", async () => {
       const db = await simpleDao.connect();
