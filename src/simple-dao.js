@@ -157,6 +157,12 @@ class SimpleDao {
     return new Operator(this, collectionName, ctrFunc.factory);
   }
 
+  async collectionNames() {
+    const db = await this.connect();
+    const collections = await db.listCollections().toArray();
+    return collections.map(collection => collection.name);
+  }
+
   async dropCollection(collectionName) {
     try {
       const db = await this.connect();
