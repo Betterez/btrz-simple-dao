@@ -41,8 +41,10 @@ function getConnectionString(dbConfig) {
   connectionString += dbHostUris;
   connectionString += `/${dbConfig.options.database}`;
 
-  const authMechanism = getAuthMechanism(dbConfig);
-  connectionString += `?authMechanism=${authMechanism}`;
+  if (connectionString.indexOf("@") !== -1) {
+    const authMechanism = getAuthMechanism(dbConfig);
+    connectionString += `?authMechanism=${authMechanism}`;
+  }
 
   const readPreference = getReadPreference(dbConfig);
   if (readPreference) {
@@ -112,7 +114,8 @@ class SimpleDao {
     this.logInfo(`Connecting to Mongo server(s): ${connectionStringWithoutCredentials}`);
 
     try {
-      mongoClients[this.connectionString] = MongoClient.connect(this.connectionString);
+      console.log("cnstr", this.connectionString);
+      mongoClients[this.connectionString] = MongoClient.connect(this.connectionString, {useNewUrlParser: true});
       const client = await mongoClients[this.connectionString];
 
       client.on("close", (err) => {

@@ -1,10 +1,10 @@
 {
   "name": "btrz-simple-dao",
-  "version": "4.0.0",
+  "version": "4.0.2",
   "description": "Betterez Simple DAO",
   "main": "index.js",
   "scripts": {
-    "test": "NODE_ENV=test node_modules/mocha/bin/mocha --ui bdd -t 5000",
+    "test": "NODE_ENV=test node_modules/mocha/bin/mocha --ui bdd --exit -t 5000",
     "test-w": "NODE_ENV=test node_modules/mocha/bin/mocha -w"
   },
   "repository": {
@@ -42,7 +42,7 @@
     "eslint-config-btrz": "^1.6.0",
     "eslint-plugin-mocha": "^5.2.1",
     "istanbul": "^0.4.3",
-    "mocha": "2.4.5",
+    "mocha": "^7.1.2",
     "sinon": "latest",
     "uuid": "^2.0.1",
     "xunit-file": "latest"

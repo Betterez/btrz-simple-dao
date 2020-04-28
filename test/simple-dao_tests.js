@@ -1,24 +1,32 @@
-const Chance = require("chance");
-const chance = new Chance();
-const {ObjectID, MongoClient, Cursor} = require("mongodb");
-const chai = require("chai");
-const expect = chai.expect;
-const chaiAsPromised = require("chai-as-promised");
-chai.use(chaiAsPromised);
-const sinon = require("sinon");
-const sandbox = sinon.createSandbox();
-const {ALL_AUTH_MECHANISMS, ALL_READ_PREFERENCES} = require("../constants");
-const SimpleDao = require("../").SimpleDao;
-const {getConnectionString} = require("../src/simple-dao");
-
-
-async function databaseHasCollection(db, collectionName) {
-  const allCollections = await db.listCollections().toArray();
-  return allCollections.some((collection) => { return collection.name === collectionName; });
-}
-
-
+// eslint-disable-next-line max-statements
 describe("SimpleDao", () => {
+  const Chance = require("chance");
+  const chance = new Chance();
+  const {
+    ObjectID, MongoClient, Cursor
+  } = require("mongodb");
+  const chai = require("chai");
+  const expect = chai.expect;
+  const chaiAsPromised = require("chai-as-promised");
+  chai.use(chaiAsPromised);
+  const sinon = require("sinon");
+  const sandbox = sinon.createSandbox();
+  const {
+    ALL_AUTH_MECHANISMS, ALL_READ_PREFERENCES
+  } = require("../constants");
+  const SimpleDao = require("../").SimpleDao;
+  const {
+    getConnectionString
+  } = require("../src/simple-dao");
+
+
+  async function databaseHasCollection(db, collectionName) {
+    const allCollections = await db.listCollections().toArray();
+    return allCollections.some((collection) => {
+      return collection.name === collectionName;
+    });
+  }
+
   let config = null;
   let simpleDao = null;
   let collectionName = null;
@@ -63,7 +71,9 @@ describe("SimpleDao", () => {
     const db = await simpleDao.connect();
     try {
       await db.dropCollection(collectionName);
-    } catch (err) {}
+    } catch (err) {
+      // ignore error
+    }
   });
 
   describe(".objectId()", () => {
@@ -93,11 +103,16 @@ describe("SimpleDao", () => {
   describe("getConnectionString()", () => {
     it("should return a valid connection string for one db server", () => {
       const connectionString = getConnectionString(config.db);
-      expect(connectionString).to.eql("mongodb://127.0.0.1:27017/simple_dao_test?authMechanism=DEFAULT");
+      expect(connectionString).to.eql("mongodb://127.0.0.1:27017/simple_dao_test");
+    });
+
+    it("should not include an authentication mechanism if no username or pwd", () => {
+      const connectionString = getConnectionString(config.db);
+      expect(connectionString).to.eql("mongodb://127.0.0.1:27017/simple_dao_test");
     });
 
     it("should return a valid connection string for one db server using authentication credentials", () => {
-      const config = {
+      const config2 = {
         db: {
           options: {
             database: "simple_dao_test",
@@ -107,13 +122,13 @@ describe("SimpleDao", () => {
           uris: ["127.0.0.1:27017"]
         }
       };
-      const connectionString = getConnectionString(config.db);
+      const connectionString = getConnectionString(config2.db);
       expect(connectionString).to.eql("mongodb://usr:pwd@127.0.0.1:27017/simple_dao_test?authMechanism=DEFAULT");
     });
 
     it("should URL-encode the authentication credentials " +
       "so that credentials that include symbols will not result in invalid connection strings", () => {
-      const config = {
+      const config2 = {
         db: {
           options: {
             database: "simple_dao_test",
@@ -123,13 +138,13 @@ describe("SimpleDao", () => {
           uris: ["127.0.0.1:27017"]
         }
       };
-      const connectionString = getConnectionString(config.db);
+      const connectionString = getConnectionString(config2.db);
       expect(connectionString)
         .to.eql("mongodb://u%24ername:pa%24%24w%7B%7Drd@127.0.0.1:27017/simple_dao_test?authMechanism=DEFAULT");
     });
 
     it("should return a valid connection string for many db servers using authentication credentials", () => {
-      const config = {
+      const config2 = {
         db: {
           options: {
             database: "simple_dao_test",
@@ -142,13 +157,13 @@ describe("SimpleDao", () => {
           ]
         }
       };
-      const connectionString = getConnectionString(config.db);
+      const connectionString = getConnectionString(config2.db);
       expect(connectionString).to.eql("mongodb://usr:pwd@127.0.0.1:27017,127.0.0.2:27018/simple_dao_test?authMechanism=DEFAULT");
     });
 
     it("should return a valid connection string that includes the specified authentication mechanism", () => {
       for (const authMechanism of ALL_AUTH_MECHANISMS) {
-        const config = {
+        const config2 = {
           db: {
             options: {
               database: "simple_dao_test",
@@ -159,13 +174,13 @@ describe("SimpleDao", () => {
             uris: ["127.0.0.1:27017"]
           }
         };
-        const connectionString = getConnectionString(config.db);
+        const connectionString = getConnectionString(config2.db);
         expect(connectionString).to.eql(`mongodb://usr:pwd@127.0.0.1:27017/simple_dao_test?authMechanism=${authMechanism}`);
       }
     });
 
     it("should throw an error if an invalid authentication mechanism is specified", () => {
-      const config = {
+      const config2 = {
         db: {
           options: {
             database: "simple_dao_test",
@@ -176,13 +191,15 @@ describe("SimpleDao", () => {
           uris: ["127.0.0.1:27017"]
         }
       };
-      expect(() => { return getConnectionString(config.db); })
+      expect(() => {
+        return getConnectionString(config2.db);
+      })
         .to.throw("Database config 'authMechanism' must be one of DEFAULT, MONGODB-CR, SCRAM-SHA-1, SCRAM-SHA-256");
     });
 
     it("should return a valid connection string that includes the specified read preference", () => {
       for (const readPreference of ALL_READ_PREFERENCES) {
-        const config = {
+        const config2 = {
           db: {
             options: {
               database: "simple_dao_test",
@@ -193,14 +210,14 @@ describe("SimpleDao", () => {
             uris: ["127.0.0.1:27017"]
           }
         };
-        const connectionString = getConnectionString(config.db);
+        const connectionString = getConnectionString(config2.db);
         expect(connectionString)
           .to.eql(`mongodb://usr:pwd@127.0.0.1:27017/simple_dao_test?authMechanism=DEFAULT&readPreference=${readPreference}`);
       }
     });
 
     it("should throw an error if an invalid read preference is specified", () => {
-      const config = {
+      const config2 = {
         db: {
           options: {
             database: "simple_dao_test",
@@ -211,12 +228,14 @@ describe("SimpleDao", () => {
           uris: ["127.0.0.1:27017"]
         }
       };
-      expect(() => { return getConnectionString(config.db); }).to.throw("When specified, database config 'readPreference' " +
+      expect(() => {
+        return getConnectionString(config2.db);
+      }).to.throw("When specified, database config 'readPreference' " +
         "must be one of primary, primaryPreferred, secondary, secondaryPreferred, nearest");
     });
 
     it("should return a valid connection string that includes the specified replica set name", () => {
-      const config = {
+      const config2 = {
         db: {
           options: {
             database: "simple_dao_test",
@@ -227,9 +246,9 @@ describe("SimpleDao", () => {
           uris: ["127.0.0.1:27017"]
         }
       };
-      const connectionString = getConnectionString(config.db);
+      const connectionString = getConnectionString(config2.db);
       expect(connectionString)
-        .to.eql(`mongodb://usr:pwd@127.0.0.1:27017/simple_dao_test?authMechanism=DEFAULT&replicaSet=${config.db.options.replicaSet}`);
+        .to.eql(`mongodb://usr:pwd@127.0.0.1:27017/simple_dao_test?authMechanism=DEFAULT&replicaSet=${config2.db.options.replicaSet}`);
     });
   });
 
@@ -368,7 +387,7 @@ describe("SimpleDao", () => {
       });
     });
 
-    it("should allow writing files", (done) => {
+    it("should allow writing files", () => {
       const fileName = "tintin";
       const path = "test/fixtures/tintin.jpg";
       const data = require("fs").readFileSync(path);
@@ -389,11 +408,10 @@ describe("SimpleDao", () => {
         });
       }).then(() => {
         const gs = new GridStore(db, fileName, "r");
-        gs.open((err, gsx) => {
+        gs.open((_err, _gsx) => {
           gs.seek(0, () => {
-            gs.read((err, readData) => {
+            gs.read((_err2, readData) => {
               expect(data.toString("base64")).to.eq(readData.toString("base64"));
-              done();
             });
           });
         });
@@ -406,12 +424,12 @@ describe("SimpleDao", () => {
       const data = require("fs").readFileSync(path);
 
       const gridStore = new GridStore(db, fileName, "w");
-      gridStore.open((err, gridStore) => {
-        gridStore.write(data, (err, gridStore) => {
-          gridStore.close((err, result) => {
-            return simpleDao.connect().then((db) => {
-              db.gridfs().open(fileName, "r", (err, gs) => {
-                gs.read((err, readData) => {
+      gridStore.open((_err, gridStore1) => {
+        gridStore1.write(data, (_err2, gridStore2) => {
+          gridStore2.close((_err3, _result) => {
+            return simpleDao.connect().then((db2) => {
+              db2.gridfs().open(fileName, "r", (_err4, gs) => {
+                gs.read((_err5, readData) => {
                   expect(data.toString("base64")).to.eq(readData.toString("base64"));
                   done();
                 });
@@ -469,7 +487,9 @@ describe("SimpleDao", () => {
     });
 
     it("should throw an error if the provided constructor function does not have a 'factory' method", () => {
-      expect(() => simpleDao.for({})).to.throw("SimpleDao: The provided constructor function or class needs to have a factory function");
+      expect(() => {
+        simpleDao.for({});
+      }).to.throw("SimpleDao: The provided constructor function or class needs to have a factory function");
     });
   });
 
