@@ -115,7 +115,7 @@ class SimpleDao {
 
     try {
       console.log("cnstr", this.connectionString);
-      mongoClients[this.connectionString] = MongoClient.connect(this.connectionString, {useNewUrlParser: true});
+      mongoClients[this.connectionString] = MongoClient.connect(this.connectionString, {useNewUrlParser: true, useUnifiedTopology: true});
       const client = await mongoClients[this.connectionString];
 
       client.on("close", (err) => {
