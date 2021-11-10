@@ -110,8 +110,12 @@ class Operator {
     try {
       const db = await this.simpleDao.connect();
       const collection = db.collection(this.collectionName);
-      return collection.distinct(field || "", query || {});
+      const result = await collection.distinct(field || "", query || {});
+      return result;
     } catch (err) {
+      if (err.code === 40352) {
+        return [];
+      }
       this.simpleDao.logError("SimpleDao: Error performing distinct", err);
       throw err;
     }
