@@ -33,6 +33,10 @@ function getAuthMechanism(dbConfig) {
 function getConnectionString(dbConfig) {
   let connectionString = "mongodb://";
 
+  if (dbConfig.options.useSRVRecord) {
+    connectionString = "mongodb+srv://";
+  }
+
   if (dbConfig.options.username.length > 0) {
     connectionString += `${encodeURIComponent(dbConfig.options.username)}:${encodeURIComponent(dbConfig.options.password)}@`;
   }
