@@ -60,6 +60,16 @@ function getConnectionString(dbConfig) {
     connectionString += `&replicaSet=${replicaSet}`;
   }
 
+  const authSource = dbConfig.options.authSource;
+  if (authSource) {
+    connectionString += `&authSource=${authSource}`;
+  }
+
+  const ssl = dbConfig.options.ssl;
+  if (ssl) {
+    connectionString += `&ssl=${ssl}`;
+  }
+
   return connectionString;
 }
 

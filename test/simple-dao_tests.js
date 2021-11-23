@@ -251,6 +251,28 @@ describe("SimpleDao", () => {
         .to.eql(`mongodb://usr:pwd@127.0.0.1:27017/simple_dao_test?authMechanism=DEFAULT&replicaSet=${config2.db.options.replicaSet}`);
     });
 
+    it("should return a valid connection string that includes the authentication source and if ssl", () => {
+      const config2 = {
+        db: {
+          options: {
+            database: "simple_dao_test",
+            username: "usr",
+            password: "pwd",
+            replicaSet: "replica_set_name",
+            authSource: "admin",
+            ssl: true
+          },
+          uris: [
+            "host1:1024",
+            "host1:1025"
+          ]
+        }
+      };
+      const connectionString = getConnectionString(config2.db);
+      expect(connectionString)
+        .to.eql("mongodb://usr:pwd@host1:1024,host1:1025/simple_dao_test?authMechanism=DEFAULT&replicaSet=replica_set_name&authSource=admin&ssl=true");
+    });
+
     it("should return a valid connection string that includes the SRV record", () => {
       const config2 = {
         db: {
