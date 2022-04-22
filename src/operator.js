@@ -1,12 +1,20 @@
 const InnerCursor = require("./inner-cursor").InnerCursor;
 const ObjectID = require("mongodb").ObjectID;
-
-
 class Operator {
   constructor(simpleDao, collectionName, factory) {
     this.simpleDao = simpleDao;
     this.collectionName = collectionName;
     this.factory = factory;
+  }
+
+  static cleanOptions(options) {
+    if (!options) {
+      return {};
+    }
+    if (options.w) {
+      delete options.w;
+    }
+    return options;
   }
 
   async count(query) {
@@ -71,7 +79,7 @@ class Operator {
     try {
       const db = await this.simpleDao.connect();
       const collection = db.collection(this.collectionName);
-      const result = await collection.update(query, update, options || {});
+      const result = await collection.update(query, update, Operator.cleanOptions(options));
       const endResult = result.result;
       endResult.updatedExisting = endResult.nModified > 0;
       return endResult;

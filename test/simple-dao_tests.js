@@ -7,8 +7,6 @@ describe("SimpleDao", () => {
   } = require("mongodb");
   const chai = require("chai");
   const expect = chai.expect;
-  const chaiAsPromised = require("chai-as-promised");
-  chai.use(chaiAsPromised);
   const sinon = require("sinon");
   const sandbox = sinon.createSandbox();
   const {
@@ -550,7 +548,12 @@ describe("SimpleDao", () => {
 
     it("should reject if an error was encountered when connecting to the database", async () => {
       sandbox.stub(simpleDao, "connect").rejects(new Error("Some connection error"));
-      await expect(simpleDao.aggregate(collectionName, {})).to.eventually.be.rejectedWith("Some connection error");
+      try {
+        await simpleDao.aggregate(collectionName, {});
+        expect(false).to.be.true;
+      } catch (err) {
+        expect(err.message).to.eql("Some connection error");
+      }
     });
   });
 
@@ -573,7 +576,12 @@ describe("SimpleDao", () => {
     });
 
     it("should reject if a model is not provided", async () => {
-      await expect(simpleDao.save()).to.eventually.be.rejectedWith("SimpleDao: No data was provided in the call to .save()");
+      try {
+        await simpleDao.save();
+        expect(false).to.be.true;
+      } catch (err) {
+        expect(err.message).to.eql("SimpleDao: No data was provided in the call to .save()");
+      }
     });
 
     it("should mutate the model and assign the _id from the saved db document when the original model doesn't have an _id", async () => {
@@ -639,7 +647,12 @@ describe("SimpleDao", () => {
 
       it("should reject if an error was encountered when connecting to the database", async () => {
         sandbox.stub(simpleDao, "connect").rejects(new Error("Some connection error"));
-        await expect(simpleDao.for(Model).count({})).to.eventually.be.rejectedWith("Some connection error");
+        try {
+          await simpleDao.for(Model).count({});
+          expect(false).to.be.true;
+        } catch (err) {
+          expect(err.message).to.eql("Some connection error");
+        }
       });
     });
 
@@ -668,7 +681,12 @@ describe("SimpleDao", () => {
         });
 
         it("should reject if there was an error performing the query", async () => {
-          return expect(simpleDao.for(Model).find({a: {$badOperator: 0}}).toArray()).to.eventually.be.rejectedWith("unknown operator");
+          try {
+            await simpleDao.for(Model).find({a: {$badOperator: 0}}).toArray();
+            expect(false).to.be.true;
+          } catch (err) {
+            expect(err.message).to.eql("unknown operator: $badOperator");
+          }
         });
       });
 
@@ -706,7 +724,12 @@ describe("SimpleDao", () => {
       });
 
       it("should reject if there was an error performing the query", async () => {
-        return expect(simpleDao.for(Model).findOne({a: {$badOperator: 0}})).to.eventually.be.rejectedWith("unknown operator");
+        try {
+          await simpleDao.for(Model).findOne({a: {$badOperator: 0}});
+          expect(true).to.eql(false);
+        } catch (err) {
+          expect(err.message).to.contain("unknown operator");
+        }
       });
     });
 
@@ -727,8 +750,12 @@ describe("SimpleDao", () => {
         });
 
         it("should reject if the provided string is not a valid Object ID", async () => {
-          return expect(simpleDao.for(Model).findById("1")).to.eventually.be
-            .rejectedWith("Argument passed in must be a single String of 12 bytes or a string of 24 hex characters");
+          try {
+            await simpleDao.for(Model).findById("1");
+            expect(true).to.eql(false);
+          } catch (err) {
+            expect(err.message).to.eql("Argument passed in must be a single String of 12 bytes or a string of 24 hex characters");
+          }
         });
       });
 
@@ -771,8 +798,12 @@ describe("SimpleDao", () => {
         });
 
         it("should reject if there was an error performing the query", async () => {
-          return expect(simpleDao.for(Model).findAggregate({a: {$badOperator: 0}}).toArray())
-            .to.eventually.be.rejectedWith("Unrecognized pipeline stage name");
+          try {
+            await simpleDao.for(Model).findAggregate({a: {$badOperator: 0}}).toArray();
+            expect(true).to.eql(false);
+          } catch (err) {
+            expect(err.message).to.eql("Unrecognized pipeline stage name: 'a'");
+          }
         });
       });
 
@@ -789,11 +820,21 @@ describe("SimpleDao", () => {
 
     describe(".update()", () => {
       it("should reject if no query is provided", async () => {
-        return expect(simpleDao.for(Model).update()).to.be.rejectedWith("query can't be undefined or null");
+        try {
+          await simpleDao.for(Model).update();
+          expect(true).to.eql(false);
+        } catch (err) {
+          expect(err.message).to.eql("query can't be undefined or null");
+        }
       });
 
       it("should reject if no update parameter is provided", async () => {
-        return expect(simpleDao.for(Model).update({})).to.be.rejectedWith("Error: update can't be undefined or null");
+        try {
+          await simpleDao.for(Model).update({});
+          expect(true).to.eql(false);
+        } catch (err) {
+          expect(err.message).to.eql("update can't be undefined or null");
+        }
       });
 
       it("should update only one document by default", async () => {
@@ -812,13 +853,22 @@ describe("SimpleDao", () => {
       });
 
       it("should reject if the update operation is invalid", async () => {
-        return expect(simpleDao.for(Model).update({b: 1}, {$badOperator: {a: 5}}))
-          .to.be.rejectedWith("Unknown modifier");
+        try {
+          await simpleDao.for(Model).update({b: 1}, {$badOperator: {a: 5}});
+          expect(true).to.eql(false);
+        } catch (err) {
+          expect(err.message).to.eql("Unknown modifier: $badOperator. Expected a valid update modifier or pipeline-style update specified as an array");
+        }
       });
 
       it("should reject if an error was encountered when connecting to the database", async () => {
         sandbox.stub(simpleDao, "connect").rejects(new Error("Some connection error"));
-        await expect(simpleDao.for(Model).update({}, {$set: {a: 5}})).to.eventually.be.rejectedWith("Some connection error");
+        try {
+          await simpleDao.for(Model).update({}, {$set: {a: 5}});
+          expect(false).to.eql(true);
+        } catch (err) {
+          expect(err.message).to.eql("Some connection error");
+        }
       });
     });
 
@@ -852,17 +902,31 @@ describe("SimpleDao", () => {
       });
 
       it("should reject if no query is provided", async () => {
-        return expect(simpleDao.for(Model).remove()).to.be.rejectedWith("query can't be undefined or null");
+        try {
+          await simpleDao.for(Model).remove();
+          expect(true).to.eql(false);
+        } catch (err) {
+          expect(err.message).to.eql("query can't be undefined or null");
+        }
       });
 
       it("should reject if the query is invalid", async () => {
-        return expect(simpleDao.for(Model).remove({$badOperator: 1}))
-          .to.be.rejectedWith("unknown top level operator");
+        try {
+          await simpleDao.for(Model).remove({$badOperator: 1});
+          expect(true).to.eql(false);
+        } catch (err) {
+          expect(err.message).to.eql("unknown top level operator: $badOperator");
+        }
       });
 
       it("should reject if an error was encountered when connecting to the database", async () => {
         sandbox.stub(simpleDao, "connect").rejects(new Error("Some connection error"));
-        await expect(simpleDao.for(Model).remove({})).to.eventually.be.rejectedWith("Some connection error");
+        try {
+          await simpleDao.for(Model).remove({});
+          expect(false).to.eql(true);
+        } catch (err) {
+          expect(err.message).to.eql("Some connection error");
+        }
       });
     });
 
@@ -883,8 +947,12 @@ describe("SimpleDao", () => {
         });
 
         it("should reject if the provided string is not a valid Object ID", async () => {
-          return expect(simpleDao.for(Model).removeById("1")).to.eventually.be
-            .rejectedWith("Argument passed in must be a single String of 12 bytes or a string of 24 hex characters");
+          try {
+            await simpleDao.for(Model).removeById("1");
+            expect(true).to.be.false;
+          } catch (err) {
+            expect(err.message).to.eql("Argument passed in must be a single String of 12 bytes or a string of 24 hex characters");
+          }
         });
       });
 
@@ -913,13 +981,22 @@ describe("SimpleDao", () => {
       });
 
       it("should reject if the query is invalid", async () => {
-        return expect(simpleDao.for(Model).distinct("a", {$badOperator: 1}))
-          .to.be.rejectedWith("unknown top level operator");
+        try {
+          await simpleDao.for(Model).distinct("a", {$badOperator: 1});
+          expect(false).to.be.true;
+        } catch (err) {
+          expect(err.message).to.eql("unknown top level operator: $badOperator");
+        }
       });
 
       it("should reject if an error was encountered when connecting to the database", async () => {
         sandbox.stub(simpleDao, "connect").rejects(new Error("Some connection error"));
-        await expect(simpleDao.for(Model).distinct("a")).to.eventually.be.rejectedWith("Some connection error");
+        try {
+          await simpleDao.for(Model).distinct("a");
+          expect(1).to.equal(0);
+        } catch (e) {
+          expect(e.message).to.eql("Some connection error");
+        }
       });
     });
   });

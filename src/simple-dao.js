@@ -84,7 +84,6 @@ function getCollectionName(ctrFunc) {
 // A collection of all connections to the DB, keyed by the connection string that was used to connect
 const mongoClients = {};
 
-
 class SimpleDao {
   constructor(options, logger) {
     this.connectionString = getConnectionString(options.db);
