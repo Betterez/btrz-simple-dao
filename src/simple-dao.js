@@ -145,6 +145,11 @@ class SimpleDao {
     }
   }
 
+  async getCurrentClient() {
+    const client = await this._getMongoClient();
+    return client;
+  }
+
   async connect() {
     const client = await this._getMongoClient(this.connectionString);
     // Use the database specified in the connection string
