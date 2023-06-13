@@ -20,6 +20,24 @@ class SimpleDaoArchive {
         }
     }
 
+    async find(model, query, options = {}) {
+        try {
+            let results = [];
+            results = await this.mainDao.for(model)
+                                        .find(query, options)
+                                        .toArray();
+            if (results.length === 0 && this.sndDao) {
+                results = await this.sndDao.for(model)
+                                            .find(query, options)
+                                            .toArray();
+            }
+            return results;
+        } catch (error) {
+            this.logError("SimpleDaoArchive: Error performing find", error);
+            throw error;
+        }
+    };
+
     async findById(model, id) {
         try {
             let result = null;
