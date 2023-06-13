@@ -1,3 +1,5 @@
+const { after } = require("mocha");
+
 // eslint-disable-next-line max-statements
 describe("SimpleDaoArchive", () => {
     const chai = require("chai");
@@ -21,9 +23,7 @@ describe("SimpleDaoArchive", () => {
         };
 
         static factory(literal) {
-            let model1 = new Model1();
-            model1.name = literal.name;
-            return model1;
+            return Object.assign(new Model1(), literal);
         }
     };
 
@@ -33,11 +33,25 @@ describe("SimpleDaoArchive", () => {
         };
 
         static factory(literal) {
-            let model2 = new Model2();
-            model2.name = literal.name;
-            return model2;
+            return Object.assign(new Model2(), literal);
         }
     };
+
+    async function existCollection(db, collection) {
+        let collections = await db.listCollections().toArray();
+        collections = collections.map(col => col.name);
+        return collections.includes(collection);
+    };
+    
+    async function expectDocumentDoesNotExist(db, id, _collectionName = collectionName) {
+        const document = await db.collection(_collectionName).findOne({_id: id});
+        expect(document).to.not.exist;
+    };
+
+    async function expectDocumentExists(db, id, _collectionName = collectionName) {
+        const document = await db.collection(_collectionName).findOne({_id: id});
+        expect(document).to.exist;
+    }
 
     before(() => {
         config = {
@@ -62,8 +76,8 @@ describe("SimpleDaoArchive", () => {
                 }
             }
         };
-        mainModel = Model1.factory({name: "mainModel"});
-        sndModel = Model2.factory({name: "sndModel"});
+        mainModel = Model1.factory({_id: SimpleDao.objectId(), name: "mainModel"});
+        sndModel = Model2.factory({_id: SimpleDao.objectId(), name: "sndModel"});
         simpleDao = new SimpleDao(config.mainDao);
         simpleDaoArchive = new SimpleDao(config.sndDao);
         wrapperDaoArchive = null;
@@ -74,32 +88,17 @@ describe("SimpleDaoArchive", () => {
         const db1 = await simpleDao.connect();
         const db2 = await simpleDaoArchive.connect();
         try {
-            if (await existCollection(db1, mainModel.collectionName())) {
-                await db1.dropCollection(mainModel.collectionName());
+            if (await existCollection(db1, Model1.collectionName())) {
+                await db1.dropCollection(Model1.collectionName());
             }
-            if (await existCollection(db2, sndModel.collectionName())) {
-                await db2.dropCollection(sndModel.collectionName());
+            if (await existCollection(db2, Model2.collectionName())) {
+                await db2.dropCollection(Model2.collectionName());
             }
+            return
         } catch (err) {
-            // ignore error
+            console.log('ERR ', err);
         }
     });
-
-    async function existCollection(db, collection) {
-        const collections = await db.listCollections().toArray()
-        return collections.includes(collection);
-    };
-    
-    async function expectDocumentDoesNotExist(db, id, _collectionName = collectionName) {
-        // const db = await simpleDao.connect();
-        const document = await db.collection(_collectionName).findOne({_id: id});
-        expect(document).to.not.exist;
-    };
-
-    async function expectDocumentExists(db, id, _collectionName = collectionName) {
-        const document = await db.collection(_collectionName).findOne({_id: id});
-        expect(document).to.exist;
-    }
 
     describe("getConnectionString()", () => {
         it("Should return valid connection strings for each dao db server", () => {
@@ -156,7 +155,7 @@ describe("SimpleDaoArchive", () => {
                 
                 expect(document).to.exist;
                 expect(document).to.be.an.instanceOf(Model1);
-                expect(document.name).to.be.equal(mainModel.name);
+                expect(document).to.be.eql(mainModel);
             });
     
             it("Should not return the document 'mainModel' from sndDao database", async () => {
@@ -170,13 +169,55 @@ describe("SimpleDaoArchive", () => {
                 
                 expect(document2).to.exist;
                 expect(document2).to.be.an.instanceOf(Model2);
-                expect(document2.name).to.be.equal(sndModel.name);;
+                expect(document2).to.be.eql(sndModel);;
             });
 
             it("Should not return the document 'sndModel' from mainDao database", async () => {
                 const document = await wrapperDaoArchive.findById(Model1, sndModel._id);
 
                 expect(document).to.not.exist;
+            });
+        });
+
+        describe("find()", () => {
+            it("Should return a list of elements its name is 'mainModel' from the model_1 collection of the mainDao", async () => {
+                const query =  {
+                    name: "mainModel"
+                };
+                const results = await wrapperDaoArchive.find(Model1, query);
+
+                expect(results).to.be.lengthOf(1);
+                expect(results[0]).to.be.an.instanceOf(Model1);
+                expect(results).to.deep.eql([mainModel])
+            });
+
+            it("Should not return elements from the model_1 collection of the mainDao", async () => {
+                const query = {
+                    name: "notExistModel"
+                };
+                const results = await wrapperDaoArchive.find(Model1, query);
+
+                expect(results).to.be.lengthOf(0);
+            });
+
+            it("Should returnt a list of elements its name is 'sndModel' from the model_2 collection of the sndDao", async () => {
+                const query = {
+                    name: "sndModel"
+                };
+                const results = await wrapperDaoArchive.find(Model2, query);
+
+                expect(results).to.be.lengthOf(1);
+                expect(results[0]).to.be.an.instanceOf(Model2);
+                expect(results).to.deep.eql([sndModel]);
+            });
+
+            it("Should not return elements from the  model_2 collection of the sndDao", async () => {
+                const query =  {
+                    name: "notExistModel"
+                };
+                const results = await wrapperDaoArchive.find(Model2, query);
+
+                expect(results).to.be.lengthOf(0);
             });
         });
     });
