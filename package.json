@@ -1,6 +1,6 @@
 {
   "name": "btrz-simple-dao",
-  "version": "4.4.1",
+  "version": "4.4.1-b",
   "description": "Betterez Simple DAO",
   "main": "index.js",
   "scripts": {
