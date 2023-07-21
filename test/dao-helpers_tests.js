@@ -149,9 +149,9 @@ describe("SimpleDaoArchive", () => {
             wrapperDaoArchive = new SimpleDaoArchive(simpleDao, simpleDaoArchive); 
         });
 
-        describe("findById()", () => {
+        describe("findByIdForModel()", () => {
             it("Should return the document 'mainModel' from mainDao database", async () => {    
-                const document = await wrapperDaoArchive.findById(Model1, mainModel._id);
+                const document = await wrapperDaoArchive.findByIdForModel(Model1, mainModel._id);
                 
                 expect(document).to.exist;
                 expect(document).to.be.an.instanceOf(Model1);
@@ -159,13 +159,13 @@ describe("SimpleDaoArchive", () => {
             });
     
             it("Should not return the document 'mainModel' from sndDao database", async () => {
-                const document = await wrapperDaoArchive.findById(Model2, mainModel._id);
+                const document = await wrapperDaoArchive.findByIdForModel(Model2, mainModel._id);
 
                 expect(document).to.not.exist;
             });
     
             it("Should return the document 'sndModel' from sndDao database", async () => {               
-                const document2 = await wrapperDaoArchive.findById(Model2, sndModel._id);
+                const document2 = await wrapperDaoArchive.findByIdForModel(Model2, sndModel._id);
                 
                 expect(document2).to.exist;
                 expect(document2).to.be.an.instanceOf(Model2);
@@ -173,7 +173,7 @@ describe("SimpleDaoArchive", () => {
             });
 
             it("Should not return the document 'sndModel' from mainDao database", async () => {
-                const document = await wrapperDaoArchive.findById(Model1, sndModel._id);
+                const document = await wrapperDaoArchive.findByIdForModel(Model1, sndModel._id);
 
                 expect(document).to.not.exist;
             });
@@ -184,7 +184,7 @@ describe("SimpleDaoArchive", () => {
                 const query =  {
                     name: "mainModel"
                 };
-                const results = await wrapperDaoArchive.find(Model1, query);
+                const results = await wrapperDaoArchive.findForModel(Model1, query);
 
                 expect(results).to.be.lengthOf(1);
                 expect(results[0]).to.be.an.instanceOf(Model1);
@@ -195,7 +195,7 @@ describe("SimpleDaoArchive", () => {
                 const query = {
                     name: "notExistModel"
                 };
-                const results = await wrapperDaoArchive.find(Model1, query);
+                const results = await wrapperDaoArchive.findForModel(Model1, query);
 
                 expect(results).to.be.lengthOf(0);
             });
@@ -204,7 +204,7 @@ describe("SimpleDaoArchive", () => {
                 const query = {
                     name: "sndModel"
                 };
-                const results = await wrapperDaoArchive.find(Model2, query);
+                const results = await wrapperDaoArchive.findForModel(Model2, query);
 
                 expect(results).to.be.lengthOf(1);
                 expect(results[0]).to.be.an.instanceOf(Model2);
@@ -215,7 +215,7 @@ describe("SimpleDaoArchive", () => {
                 const query =  {
                     name: "notExistModel"
                 };
-                const results = await wrapperDaoArchive.find(Model2, query);
+                const results = await wrapperDaoArchive.findForModel(Model2, query);
 
                 expect(results).to.be.lengthOf(0);
             });
