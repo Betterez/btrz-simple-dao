@@ -42,10 +42,10 @@ class Operator {
     return new InnerCursor(cursor, this.factory);
   }
 
-  async findOne(query) {
+  async findOne(query, options = {}) {
     try {
       const db = await this.simpleDao.connect();
-      const model = await db.collection(this.collectionName).findOne(query);
+      const model = await db.collection(this.collectionName).findOne(query, options);
       return model && this.factory(model);
     } catch (err) {
       this.simpleDao.logError("SimpleDao: Error performing findOne", err);
@@ -53,14 +53,14 @@ class Operator {
     }
   }
 
-  async findById(id) {
+  async findById(id, options = {}) {
     let _id = id;
 
     if (typeof id === "string") {
       _id = new ObjectID(id);
     }
 
-    return this.findOne({_id});
+    return this.findOne({_id}, options);
   }
 
   findAggregate(query) {
