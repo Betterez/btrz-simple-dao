@@ -1,10 +1,9 @@
-
+const assert = require("node:assert").strict;
+const { describe, it, beforeEach } = require("node:test");
 
 describe("Mock SimpleDao", () => {
   const mockDao = require("../").mockSimpleDao;
   const SimpleDao = require("../").SimpleDao;
-  const chai = require("chai");
-  const expect = chai.expect;
   const config = {
     db: {
       options: {
@@ -60,44 +59,44 @@ describe("Mock SimpleDao", () => {
 
 
     daoMethods.forEach((prop) => {
-      expect(mockDao(source)[prop]).to.be.a("function");
+      assert.strictEqual(typeof mockDao(source)[prop], "function");
     });
 
     operatorMethods.forEach((prop) => {
-      expect(mockDao(source)[prop]).to.be.a("function");
+      assert.strictEqual(typeof mockDao(source)[prop], "function");
     });
   });
 
   it("should convert the objectId", () => {
     const id = simpleDao.objectId();
-    expect(mockDao().objectId(id.toString())).to.be.eql(id);
+    assert.deepStrictEqual(mockDao().objectId(id.toString()), id);
   });
 
   it("should return the find result", () => {
     return mockDao(source).for().find().toArray()
       .then((result) => {
-        expect(result).to.be.eql(source.find);
+        assert.deepStrictEqual(result, source.find);
       });
   });
 
   it("should return the default find result", () => {
     return mockDao().for().find().toArray()
       .then((result) => {
-        expect(result).to.be.eql([]);
+        assert.deepStrictEqual(result, []);
       });
   });
 
   it("should return the findById result", () => {
     return mockDao(source).for().findById()
       .then((result) => {
-        expect(result).to.be.eql(source.findById);
+        assert.deepStrictEqual(result, source.findById);
       });
   });
 
   it("should return the default findById result", () => {
     return mockDao().for().findById()
       .then((result) => {
-        expect(result).to.be.eql({});
+        assert.deepStrictEqual(result, {});
       });
   });
 
@@ -105,7 +104,7 @@ describe("Mock SimpleDao", () => {
     const objToSave = {foo: "bar"};
     return mockDao(source).for().update(objToSave)
       .then((result) => {
-        expect(result).to.be.eql(objToSave);
+        assert.deepStrictEqual(result, objToSave);
       });
   });
 
@@ -113,42 +112,42 @@ describe("Mock SimpleDao", () => {
     const objToSave = {foo: "bar"};
     return mockDao(source).for().save(objToSave)
       .then((result) => {
-        expect(result).to.be.eql(objToSave);
+        assert.deepStrictEqual(result, objToSave);
       });
   });
 
   it("should return the aggregate result", () => {
     return mockDao(source).for().aggregate()
       .then((result) => {
-        expect(result).to.be.eql(source.aggregate);
+        assert.deepStrictEqual(result, source.aggregate);
       });
   });
 
   it("should return the count result", () => {
     return mockDao(source).for().count()
       .then((result) => {
-        expect(result).to.be.eql(source.count);
+        assert.deepStrictEqual(result, source.count);
       });
   });
 
   it("should return the findOne result", () => {
     return mockDao(source).for().findOne()
       .then((result) => {
-        expect(result).to.be.eql(source.findOne);
+        assert.deepStrictEqual(result, source.findOne);
       });
   });
 
   it("should return the removeById result", () => {
     return mockDao(source).for().removeById()
       .then((result) => {
-        expect(result).to.be.eql(source.removeById);
+        assert.deepStrictEqual(result, source.removeById);
       });
   });
 
   it("should return the findAggregate result", () => {
     return mockDao(source).for().findAggregate().toArray()
       .then((result) => {
-        expect(result).to.be.eql(source.findAggregate);
+        assert.deepStrictEqual(result, source.findAggregate);
       });
   });
 });

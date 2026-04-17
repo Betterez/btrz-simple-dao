@@ -1,3 +1,7 @@
+const { describe, it, beforeEach, afterEach } = require("node:test");
+const assert = require("node:assert").strict;
+const { deepEqual } = require("node:assert");
+
 // eslint-disable-next-line max-statements
 describe("SimpleDao", () => {
   const Chance = require("chance");
@@ -5,8 +9,6 @@ describe("SimpleDao", () => {
   const {
     ObjectID, MongoClient, Cursor
   } = require("mongodb");
-  const chai = require("chai");
-  const expect = chai.expect;
   const sinon = require("sinon");
   const sandbox = sinon.createSandbox();
   const {
@@ -43,7 +45,7 @@ describe("SimpleDao", () => {
   async function expectDocumentDoesNotExist(id, _collectionName = collectionName) {
     const db = await simpleDao.connect();
     const document = await db.collection(_collectionName).findOne({_id: id});
-    expect(document).to.not.exist;
+    assert.ok(document == null);
   }
 
   beforeEach(() => {
@@ -77,23 +79,23 @@ describe("SimpleDao", () => {
   describe(".objectId()", () => {
     describe("static method", () => {
       it("should return a new objectId", () => {
-        expect(SimpleDao.objectId()).to.be.an.instanceOf(ObjectID);
+        assert.ok(SimpleDao.objectId() instanceof ObjectID);
       });
 
       it("should return an objectId from the given 24 characters argument", () => {
         const id = "55b27c2a74757b3c5e121b0e";
-        expect(SimpleDao.objectId(id).toString()).to.be.eql(id);
+        deepEqual(SimpleDao.objectId(id).toString(), id);
       });
     });
 
     describe("instance method", () => {
       it("should return a new objectId", () => {
-        expect(simpleDao.objectId()).to.be.an.instanceOf(ObjectID);
+        assert.ok(simpleDao.objectId() instanceof ObjectID);
       });
 
       it("should return an objectId from the given 24 characters argument", () => {
         const id = "55b27c2a74757b3c5e121b0e";
-        expect(simpleDao.objectId(id).toString()).to.be.eql(id);
+        deepEqual(simpleDao.objectId(id).toString(), id);
       });
     });
   });
@@ -101,12 +103,12 @@ describe("SimpleDao", () => {
   describe("getConnectionString()", () => {
     it("should return a valid connection string for one db server", () => {
       const connectionString = getConnectionString(config.db);
-      expect(connectionString).to.eql("mongodb://127.0.0.1:27017/simple_dao_test");
+      deepEqual(connectionString, "mongodb://127.0.0.1:27017/simple_dao_test");
     });
 
     it("should not include an authentication mechanism if no username or pwd", () => {
       const connectionString = getConnectionString(config.db);
-      expect(connectionString).to.eql("mongodb://127.0.0.1:27017/simple_dao_test");
+      deepEqual(connectionString, "mongodb://127.0.0.1:27017/simple_dao_test");
     });
 
     it("should return a valid connection string for one db server using authentication credentials", () => {
@@ -121,7 +123,7 @@ describe("SimpleDao", () => {
         }
       };
       const connectionString = getConnectionString(config2.db);
-      expect(connectionString).to.eql("mongodb://usr:pwd@127.0.0.1:27017/simple_dao_test?authMechanism=DEFAULT");
+      deepEqual(connectionString, "mongodb://usr:pwd@127.0.0.1:27017/simple_dao_test?authMechanism=DEFAULT");
     });
 
     it("should URL-encode the authentication credentials " +
@@ -137,8 +139,7 @@ describe("SimpleDao", () => {
         }
       };
       const connectionString = getConnectionString(config2.db);
-      expect(connectionString)
-        .to.eql("mongodb://u%24ername:pa%24%24w%7B%7Drd@127.0.0.1:27017/simple_dao_test?authMechanism=DEFAULT");
+      deepEqual(connectionString, "mongodb://u%24ername:pa%24%24w%7B%7Drd@127.0.0.1:27017/simple_dao_test?authMechanism=DEFAULT");
     });
 
     it("should return a valid connection string for many db servers using authentication credentials", () => {
@@ -156,7 +157,7 @@ describe("SimpleDao", () => {
         }
       };
       const connectionString = getConnectionString(config2.db);
-      expect(connectionString).to.eql("mongodb://usr:pwd@127.0.0.1:27017,127.0.0.2:27018/simple_dao_test?authMechanism=DEFAULT");
+      deepEqual(connectionString, "mongodb://usr:pwd@127.0.0.1:27017,127.0.0.2:27018/simple_dao_test?authMechanism=DEFAULT");
     });
 
     it("should return a valid connection string that includes the specified authentication mechanism", () => {
@@ -173,7 +174,7 @@ describe("SimpleDao", () => {
           }
         };
         const connectionString = getConnectionString(config2.db);
-        expect(connectionString).to.eql(`mongodb://usr:pwd@127.0.0.1:27017/simple_dao_test?authMechanism=${authMechanism}`);
+        deepEqual(connectionString, `mongodb://usr:pwd@127.0.0.1:27017/simple_dao_test?authMechanism=${authMechanism}`);
       }
     });
 
@@ -189,10 +190,9 @@ describe("SimpleDao", () => {
           uris: ["127.0.0.1:27017"]
         }
       };
-      expect(() => {
-        return getConnectionString(config2.db);
-      })
-        .to.throw("Database config 'authMechanism' must be one of DEFAULT, MONGODB-CR, SCRAM-SHA-1, SCRAM-SHA-256");
+      assert.throws(() => getConnectionString(config2.db), {
+        message: "Database config 'authMechanism' must be one of DEFAULT, MONGODB-CR, SCRAM-SHA-1, SCRAM-SHA-256"
+      });
     });
 
     it("should return a valid connection string that includes the specified read preference", () => {
@@ -209,8 +209,7 @@ describe("SimpleDao", () => {
           }
         };
         const connectionString = getConnectionString(config2.db);
-        expect(connectionString)
-          .to.eql(`mongodb://usr:pwd@127.0.0.1:27017/simple_dao_test?authMechanism=DEFAULT&readPreference=${readPreference}`);
+        deepEqual(connectionString, `mongodb://usr:pwd@127.0.0.1:27017/simple_dao_test?authMechanism=DEFAULT&readPreference=${readPreference}`);
       }
     });
 
@@ -226,10 +225,10 @@ describe("SimpleDao", () => {
           uris: ["127.0.0.1:27017"]
         }
       };
-      expect(() => {
-        return getConnectionString(config2.db);
-      }).to.throw("When specified, database config 'readPreference' " +
-        "must be one of primary, primaryPreferred, secondary, secondaryPreferred, nearest");
+      assert.throws(() => getConnectionString(config2.db), {
+        message: "When specified, database config 'readPreference' " +
+        "must be one of primary, primaryPreferred, secondary, secondaryPreferred, nearest"
+      });
     });
 
     it("should return a valid connection string that includes the specified replica set name", () => {
@@ -245,8 +244,7 @@ describe("SimpleDao", () => {
         }
       };
       const connectionString = getConnectionString(config2.db);
-      expect(connectionString)
-        .to.eql(`mongodb://usr:pwd@127.0.0.1:27017/simple_dao_test?authMechanism=DEFAULT&replicaSet=${config2.db.options.replicaSet}`);
+      deepEqual(connectionString, `mongodb://usr:pwd@127.0.0.1:27017/simple_dao_test?authMechanism=DEFAULT&replicaSet=${config2.db.options.replicaSet}`);
     });
 
     it("should return a valid connection string that includes the authentication source and if ssl", () => {
@@ -267,8 +265,7 @@ describe("SimpleDao", () => {
         }
       };
       const connectionString = getConnectionString(config2.db);
-      expect(connectionString)
-        .to.eql("mongodb://usr:pwd@host1:1024,host1:1025/simple_dao_test?authMechanism=DEFAULT&replicaSet=replica_set_name&authSource=admin&ssl=true");
+      deepEqual(connectionString, "mongodb://usr:pwd@host1:1024,host1:1025/simple_dao_test?authMechanism=DEFAULT&replicaSet=replica_set_name&authSource=admin&ssl=true");
     });
 
     it("should return a valid connection string that includes the SRV record", () => {
@@ -284,8 +281,7 @@ describe("SimpleDao", () => {
         }
       };
       const connectionString = getConnectionString(config2.db);
-      expect(connectionString)
-        .to.eql("mongodb+srv://usr:pwd@127.0.0.1:27017/simple_dao_test?authMechanism=DEFAULT");
+      deepEqual(connectionString, "mongodb+srv://usr:pwd@127.0.0.1:27017/simple_dao_test?authMechanism=DEFAULT");
     });    
   });
 
@@ -308,28 +304,28 @@ describe("SimpleDao", () => {
     it("should connect to the database and return an object that allows operations on the specified database", async () => {
       console.log(simpleDao.connectionString);
       const db = await simpleDao.connect();
-      expect(db.databaseName).to.eql(config.db.options.database);
+      deepEqual(db.databaseName, config.db.options.database);
       const result = await db.collection("test_collection").insertOne({test: true});
       const _id = result.insertedId;
       const [insertedDocument] = await db.collection("test_collection").find({_id}).toArray();
-      expect(insertedDocument).to.contain({test: true});
+      assert.strictEqual(insertedDocument.test, true);
     });
 
     it("should share database connections across multiple instances of the SimpleDao " +
       "when a connection to a particular database has already been established", async () => {
       const connectionSpy = sandbox.spy(MongoClient, "connect");
 
-      expect(connectionSpy.callCount).to.eql(0);
+      assert.strictEqual(connectionSpy.callCount, 0);
       const simpleDao2 = new SimpleDao(configForOtherDatabase);
       const db2 = await simpleDao2.connect();
-      expect(connectionSpy.callCount).to.eql(1);
+      assert.strictEqual(connectionSpy.callCount, 1);
 
       // Create a new instance of the SimpleDao and connect to the database again.
       // Since we already connected to this database in the previous instance, we expect that connection to be re-used.
       const simpleDao3 = new SimpleDao(configForOtherDatabase);
       const db3 = await simpleDao3.connect();
-      expect(db3 === db2).to.be.true;
-      expect(connectionSpy.callCount).to.eql(1);
+      assert.strictEqual(db3 === db2, true);
+      assert.strictEqual(connectionSpy.callCount, 1);
 
       // Change which database we are connecting to
       configForOtherDatabase.db.options.database = "simple_dao_test_3";
@@ -337,14 +333,14 @@ describe("SimpleDao", () => {
       // Create a new instance.  We expect it to form a new connection, since we haven't connected to this database yet.
       const simpleDao4 = new SimpleDao(configForOtherDatabase);
       const db4 = await simpleDao4.connect();
-      expect(db4 === db3).to.be.false;
-      expect(connectionSpy.callCount).to.eql(2);
+      assert.strictEqual(db4 === db3, false);
+      assert.strictEqual(connectionSpy.callCount, 2);
 
       // Create another instance, which should re-use the connection from the previous instance
       const simpleDao5 = new SimpleDao(configForOtherDatabase);
       const db5 = await simpleDao5.connect();
-      expect(db5 === db4).to.be.true;
-      expect(connectionSpy.callCount).to.eql(2);
+      assert.strictEqual(db5 === db4, true);
+      assert.strictEqual(connectionSpy.callCount, 2);
     });
 
     it("should automatically reconnect when the database connection was unexpectedly closed", async () => {
@@ -353,10 +349,10 @@ describe("SimpleDao", () => {
 
       const connectionSpy = sandbox.spy(MongoClient, "connect");
 
-      expect(connectionSpy.callCount).to.eql(0);
+      assert.strictEqual(connectionSpy.callCount, 0);
       const simpleDao2 = new SimpleDao(configForOtherDatabase);
       const dbConnection2 = await simpleDao2.connect();
-      expect(connectionSpy.callCount).to.eql(1);
+      assert.strictEqual(connectionSpy.callCount, 1);
 
       // Close the database connection.
       // The next time we try to connect, we expect the simpleDao to form a new connection to the database.
@@ -364,8 +360,8 @@ describe("SimpleDao", () => {
       await client.close();
 
       const dbConnection3 = await simpleDao2.connect();
-      expect(dbConnection2 === dbConnection3).to.be.false;
-      expect(connectionSpy.callCount).to.eql(2);
+      assert.strictEqual(dbConnection2 === dbConnection3, false);
+      assert.strictEqual(connectionSpy.callCount, 2);
     });
 
     it("should reconnect on subsequent calls after the initial connection rejects with an error", async () => {
@@ -374,23 +370,23 @@ describe("SimpleDao", () => {
 
       const connectionStub = sandbox.stub(MongoClient, "connect").rejects(new Error("Some mongo error"));
 
-      expect(connectionStub.callCount).to.eql(0);
+      assert.strictEqual(connectionStub.callCount, 0);
       const simpleDao2 = new SimpleDao(configForOtherDatabase);
       try {
         await simpleDao2.connect();
-        expect.fail();
+        assert.fail();
       } catch (err) {
-        expect(err.message).to.eql("Some mongo error");
-        expect(connectionStub.callCount).to.eql(1);
+        assert.strictEqual(err.message, "Some mongo error");
+        assert.strictEqual(connectionStub.callCount, 1);
       }
 
       // Allow the database connection to proceed normally, without rejection.
       // We expect the simpleDao to form a new connection to the database.
       connectionStub.reset();
-      expect(connectionStub.callCount).to.eql(0);
+      assert.strictEqual(connectionStub.callCount, 0);
       connectionStub.callThrough();
       await simpleDao2.connect();
-      expect(connectionStub.callCount).to.eql(1);
+      assert.strictEqual(connectionStub.callCount, 1);
     });
 
     it("should connect to the database only once when multiple database requests arrive while the initial connection is still being " +
@@ -400,7 +396,7 @@ describe("SimpleDao", () => {
       const simpleDao2 = new SimpleDao(configForOtherDatabase);
 
       const connectionSpy = sandbox.spy(MongoClient, "connect");
-      expect(connectionSpy.callCount).to.eql(0);
+      assert.strictEqual(connectionSpy.callCount, 0);
 
       await Promise.all([
         simpleDao2.for(Model).find({}),
@@ -408,7 +404,7 @@ describe("SimpleDao", () => {
         simpleDao2.for(Model).find({})
       ]);
 
-      expect(connectionSpy.callCount).to.eql(1);
+      assert.strictEqual(connectionSpy.callCount, 1);
     });
   });
 
@@ -432,45 +428,86 @@ describe("SimpleDao", () => {
       return new Promise((resolve, reject) => {
         db.gridfs().open(fileName, "w", (err, gs) => {
           if (err) {
-            reject(err, null);
+            reject(err);
             return;
           }
           gs.write(data, (err2) => {
             if (err2) {
-              reject(err2, null);
+              reject(err2);
               return;
             }
-            gs.close(resolve);
-          });
-        });
-      }).then(() => {
-        const gs = new GridStore(db, fileName, "r");
-        gs.open((_err, _gsx) => {
-          gs.seek(0, () => {
-            gs.read((_err2, readData) => {
-              expect(data.toString("base64")).to.eq(readData.toString("base64"));
+            gs.close((err3) => {
+              if (err3) {
+                reject(err3);
+                return;
+              }
+              resolve();
             });
           });
         });
-      });
+      }).then(() => new Promise((resolve, reject) => {
+        const gs = new GridStore(db, fileName, "r");
+        gs.open((errOpen) => {
+          if (errOpen) {
+            reject(errOpen);
+            return;
+          }
+          gs.seek(0, (errSeek) => {
+            if (errSeek) {
+              reject(errSeek);
+              return;
+            }
+            gs.read((errRead, readData) => {
+              if (errRead) {
+                reject(errRead);
+                return;
+              }
+              assert.strictEqual(data.toString("base64"), readData.toString("base64"));
+              resolve();
+            });
+          });
+        });
+      }));
     });
 
-    it("should allow reading files", (done) => {
+    it("should allow reading files", () => {
       const fileName = "tintin";
       const path = "test/fixtures/tintin.jpg";
       const data = require("fs").readFileSync(path);
 
-      const gridStore = new GridStore(db, fileName, "w");
-      gridStore.open((_err, gridStore1) => {
-        gridStore1.write(data, (_err2, gridStore2) => {
-          gridStore2.close((_err3, _result) => {
-            return simpleDao.connect().then((db2) => {
-              db2.gridfs().open(fileName, "r", (_err4, gs) => {
-                gs.read((_err5, readData) => {
-                  expect(data.toString("base64")).to.eq(readData.toString("base64"));
-                  done();
+      return new Promise((resolve, reject) => {
+        const gridStore = new GridStore(db, fileName, "w");
+        gridStore.open((err, gridStore1) => {
+          if (err) {
+            reject(err);
+            return;
+          }
+          gridStore1.write(data, (err2, gridStore2) => {
+            if (err2) {
+              reject(err2);
+              return;
+            }
+            gridStore2.close((err3) => {
+              if (err3) {
+                reject(err3);
+                return;
+              }
+              simpleDao.connect().then((db2) => {
+                db2.gridfs().open(fileName, "r", (err4, gs) => {
+                  if (err4) {
+                    reject(err4);
+                    return;
+                  }
+                  gs.read((err5, readData) => {
+                    if (err5) {
+                      reject(err5);
+                      return;
+                    }
+                    assert.strictEqual(data.toString("base64"), readData.toString("base64"));
+                    resolve();
+                  });
                 });
-              });
+              }).catch(reject);
             });
           });
         });
@@ -488,14 +525,16 @@ describe("SimpleDao", () => {
 
     it("should return an empty array if there are no collections in the database", async () => {
       const collectionNames = await simpleDao.collectionNames();
-      expect(collectionNames).to.eql([]);
+      deepEqual(collectionNames, []);
     });
 
     it("should return a list of all collection names in the database", async () => {
       await db.collection("collection_1").insert({});
       await db.collection("collection_2").insert({});
       const collectionNames = await simpleDao.collectionNames();
-      expect(collectionNames).to.be.an("array").that.includes.members(["collection_1", "collection_2"]);
+      assert.ok(Array.isArray(collectionNames));
+      assert.ok(collectionNames.includes("collection_1"));
+      assert.ok(collectionNames.includes("collection_2"));
     });
   });
 
@@ -503,30 +542,30 @@ describe("SimpleDao", () => {
     it("should drop the specified collection", async () => {
       const db = await simpleDao.connect();
       let collectionExists = await databaseHasCollection(db, collectionName);
-      expect(collectionExists).to.be.false;
+      assert.strictEqual(collectionExists, false);
 
       await simpleDao.save(model);
       collectionExists = await databaseHasCollection(db, collectionName);
-      expect(collectionExists).to.be.true;
+      assert.strictEqual(collectionExists, true);
 
       await simpleDao.dropCollection(collectionName);
       collectionExists = await databaseHasCollection(db, collectionName);
-      expect(collectionExists).to.be.false;
+      assert.strictEqual(collectionExists, false);
     });
   });
 
   describe(".for()", () => {
     it("should return an Operator with the correct properties", () => {
       const operator = simpleDao.for(Model);
-      expect(operator.simpleDao).to.eql(simpleDao);
-      expect(operator.collectionName).to.eql(Model.collectionName());
-      expect(operator.factory).to.eql(Model.factory);
+      assert.strictEqual(operator.simpleDao, simpleDao);
+      deepEqual(operator.collectionName, Model.collectionName());
+      assert.strictEqual(operator.factory, Model.factory);
     });
 
     it("should throw an error if the provided constructor function does not have a 'factory' method", () => {
-      expect(() => {
-        simpleDao.for({});
-      }).to.throw("SimpleDao: The provided constructor function or class needs to have a factory function");
+      assert.throws(() => simpleDao.for({}), {
+        message: "SimpleDao: The provided constructor function or class needs to have a factory function"
+      });
     });
   });
 
@@ -541,18 +580,18 @@ describe("SimpleDao", () => {
 
       const query = {$group: {_id: 1, total: {$sum: "$a"}}};
       const cursor = await simpleDao.aggregate(collectionName, query);
-      expect(cursor.constructor.name).to.eql("AggregationCursor");
+      assert.strictEqual(cursor.constructor.name, "AggregationCursor");
       const result = await cursor.toArray();
-      expect(result).to.deep.eql([{_id: 1, total: 3}]);
+      deepEqual(result, [{_id: 1, total: 3}]);
     });
 
     it("should reject if an error was encountered when connecting to the database", async () => {
       sandbox.stub(simpleDao, "connect").rejects(new Error("Some connection error"));
       try {
         await simpleDao.aggregate(collectionName, {});
-        expect(false).to.be.true;
+        assert.fail("expected rejection");
       } catch (err) {
-        expect(err.message).to.eql("Some connection error");
+        assert.strictEqual(err.message, "Some connection error");
       }
     });
   });
@@ -561,61 +600,61 @@ describe("SimpleDao", () => {
     it("should save the model to the correct collection, as defined by the model constructor's `collectionName()` function", async () => {
       const db = await simpleDao.connect();
       let allDocumentsInCollection = await db.collection(model.constructor.collectionName()).find({}).toArray();
-      expect(allDocumentsInCollection).to.have.length(0);
+      assert.strictEqual(allDocumentsInCollection.length, 0);
 
       await simpleDao.save(model);
       allDocumentsInCollection = await db.collection(model.constructor.collectionName()).find({}).toArray();
-      expect(allDocumentsInCollection).to.have.length(1);
-      expect(allDocumentsInCollection[0]._id.toString()).to.eql(model._id.toString());
+      assert.strictEqual(allDocumentsInCollection.length, 1);
+      assert.strictEqual(allDocumentsInCollection[0]._id.toString(), model._id.toString());
     });
 
     it("should return the model", async () => {
       const result = await simpleDao.save(model);
       Reflect.deleteProperty(result, "_id");
-      expect(result).to.deep.eql(model);
+      deepEqual(result, model);
     });
 
     it("should reject if a model is not provided", async () => {
       try {
         await simpleDao.save();
-        expect(false).to.be.true;
+        assert.fail("expected rejection");
       } catch (err) {
-        expect(err.message).to.eql("SimpleDao: No data was provided in the call to .save()");
+        assert.strictEqual(err.message, "SimpleDao: No data was provided in the call to .save()");
       }
     });
 
     it("should mutate the model and assign the _id from the saved db document when the original model doesn't have an _id", async () => {
-      expect(model._id).to.not.exist;
+      assert.ok(model._id == null);
       await simpleDao.save(model);
-      expect(model._id).to.exist;
-      expect(model._id).to.be.an.instanceOf(ObjectID);
+      assert.ok(model._id != null);
+      assert.ok(model._id instanceof ObjectID);
     });
 
     it("should save the model with its existing _id when the model is provided with an _id", async () => {
       const _id = ObjectID();
       model._id = _id;
       await simpleDao.save(model);
-      expect(model._id.toString()).to.eql(_id.toString());
+      assert.strictEqual(model._id.toString(), _id.toString());
     });
 
     it("should mutate the model and set the value of 'model.updatedAt.value' to the current date, " +
       "when the model has an 'updatedAt.value' property", async () => {
-      expect(model.updatedAt).to.not.exist;
+      assert.ok(model.updatedAt == null);
 
       await simpleDao.save(model);
-      expect(model.updatedAt).to.not.exist;
+      assert.ok(model.updatedAt == null);
 
       model.updatedAt = {};
       await simpleDao.save(model);
-      expect(model.updatedAt.value).to.not.exist;
+      assert.ok(model.updatedAt.value == null);
 
       model.updatedAt = {value: "some value"};
       await simpleDao.save(model);
-      expect(model.updatedAt.value).to.exist;
-      expect(model.updatedAt.value).to.be.an.instanceOf(Date);
+      assert.ok(model.updatedAt.value != null);
+      assert.ok(model.updatedAt.value instanceof Date);
       // Check that the updatedAt timestamp is within 10 seconds of now
       const currentTimestamp = new Date().getTime();
-      expect(model.updatedAt.value.getTime()).to.be.within(currentTimestamp - 10000, currentTimestamp + 10000);
+      assert.ok(model.updatedAt.value.getTime() >= currentTimestamp - 10000 && model.updatedAt.value.getTime() <= currentTimestamp + 10000);
     });
   });
 
@@ -639,19 +678,19 @@ describe("SimpleDao", () => {
     describe(".count()", () => {
       it("should return the number of records that match the specified query", async () => {
         let count = await simpleDao.for(Model).count({a: 1});
-        expect(count).to.eql(1);
+        assert.strictEqual(count, 1);
 
         count = await simpleDao.for(Model).count({a: 2});
-        expect(count).to.eql(2);
+        assert.strictEqual(count, 2);
       });
 
       it("should reject if an error was encountered when connecting to the database", async () => {
         sandbox.stub(simpleDao, "connect").rejects(new Error("Some connection error"));
         try {
           await simpleDao.for(Model).count({});
-          expect(false).to.be.true;
+          assert.fail("expected rejection");
         } catch (err) {
-          expect(err.message).to.eql("Some connection error");
+          assert.strictEqual(err.message, "Some connection error");
         }
       });
     });
@@ -660,32 +699,32 @@ describe("SimpleDao", () => {
       describe(".toArray()", () => {
         it("should return an array of all documents that match the specified query", async () => {
           let results = await simpleDao.for(Model).find({a: {$gt: 0}}).toArray();
-          expect(results).to.have.length(3);
+          assert.strictEqual(results.length, 3);
 
           results = await simpleDao.for(Model).find({a: 1}).toArray();
-          expect(results).to.have.length(1);
+          assert.strictEqual(results.length, 1);
         });
 
         it("should return an array of objects that are instances of the provided class, " +
           "created via the class' .factory() method", async () => {
           const factorySpy = sandbox.spy(Model, "factory");
-          expect(factorySpy.callCount).to.eql(0);
+          assert.strictEqual(factorySpy.callCount, 0);
 
           const results = await simpleDao.for(Model).find({}).toArray();
-          expect(results).to.have.length.gt(0);
-          expect(factorySpy.callCount).to.eql(results.length);
+          assert.ok(results.length > 0);
+          assert.strictEqual(factorySpy.callCount, results.length);
 
           for (const data of results) {
-            expect(data).to.be.an.instanceOf(Model);
+            assert.ok(data instanceof Model);
           }
         });
 
         it("should reject if there was an error performing the query", async () => {
           try {
             await simpleDao.for(Model).find({a: {$badOperator: 0}}).toArray();
-            expect(false).to.be.true;
+            assert.fail("expected rejection");
           } catch (err) {
-            expect(err.message).to.eql("unknown operator: $badOperator");
+            assert.strictEqual(err.message, "unknown operator: $badOperator");
           }
         });
       });
@@ -693,10 +732,10 @@ describe("SimpleDao", () => {
       describe(".toCursor()", () => {
         it("should return a cursor for all documents that match the specified query", async () => {
           const cursor = await simpleDao.for(Model).find({a: {$gt: 0}}).toCursor();
-          expect(cursor).to.be.an.instanceOf(Cursor);
+          assert.ok(cursor instanceof Cursor);
 
           const results = await cursor.toArray();
-          expect(results).to.have.length(3);
+          assert.strictEqual(results.length, 3);
         });
       });
     });
@@ -704,74 +743,74 @@ describe("SimpleDao", () => {
     describe(".findOne()", () => {
       it("should return only one object that matches the specified query", async () => {
         const result = await simpleDao.for(Model).findOne({a: 2});
-        expect(result).to.exist;
-        expect(result.a).to.eql(2);
+        assert.ok(result != null);
+        assert.strictEqual(result.a, 2);
       });
 
       it("should return null if there is no document matching the specified query", async () => {
         const result = await simpleDao.for(Model).findOne({a: 3});
-        expect(result).to.eql(null);
+        assert.strictEqual(result, null);
       });
 
       it("should return an object that is an instance of the provided class, created via the class' .factory() method", async () => {
         const factorySpy = sandbox.spy(Model, "factory");
-        expect(factorySpy.callCount).to.eql(0);
+        assert.strictEqual(factorySpy.callCount, 0);
 
         const result = await simpleDao.for(Model).findOne({});
-        expect(result).to.exist;
-        expect(result).to.be.an.instanceOf(Model);
-        expect(factorySpy.callCount).to.eql(1);
+        assert.ok(result != null);
+        assert.ok(result instanceof Model);
+        assert.strictEqual(factorySpy.callCount, 1);
       });
 
       it("should reject if there was an error performing the query", async () => {
         try {
           await simpleDao.for(Model).findOne({a: {$badOperator: 0}});
-          expect(true).to.eql(false);
+          assert.fail("expected rejection");
         } catch (err) {
-          expect(err.message).to.contain("unknown operator");
+          assert.ok(err.message.includes("unknown operator"));
         }
       });
     });
 
     describe(".findById()", () => {
-      context("when the provided 'id' is an Object ID", () => {
+      describe("when the provided 'id' is an Object ID", () => {
         it("should return the single object that has the specified id", async () => {
           const result = await simpleDao.for(Model).findById(modelOne._id);
-          expect(result).to.exist;
-          expect(result._id.toString()).to.eql(modelOne._id.toString());
+          assert.ok(result != null);
+          assert.strictEqual(result._id.toString(), modelOne._id.toString());
         });
       });
 
-      context("when the provided 'id' is a string", () => {
+      describe("when the provided 'id' is a string", () => {
         it("should return the single object that has the specified id", async () => {
           const result = await simpleDao.for(Model).findById(modelOne._id.toString());
-          expect(result).to.exist;
-          expect(result._id.toString()).to.eql(modelOne._id.toString());
+          assert.ok(result != null);
+          assert.strictEqual(result._id.toString(), modelOne._id.toString());
         });
 
         it("should reject if the provided string is not a valid Object ID", async () => {
           try {
             await simpleDao.for(Model).findById("1");
-            expect(true).to.eql(false);
+            assert.fail("expected rejection");
           } catch (err) {
-            expect(err.message).to.eql("Argument passed in must be a single String of 12 bytes or a string of 24 hex characters");
+            assert.strictEqual(err.message, "Argument passed in must be a single String of 12 bytes or a string of 24 hex characters");
           }
         });
       });
 
       it("should return an object that is an instance of the provided class, created via the class' .factory() method", async () => {
         const factorySpy = sandbox.spy(Model, "factory");
-        expect(factorySpy.callCount).to.eql(0);
+        assert.strictEqual(factorySpy.callCount, 0);
 
         const result = await simpleDao.for(Model).findById(modelOne._id);
-        expect(result).to.exist;
-        expect(result).to.be.an.instanceOf(Model);
-        expect(factorySpy.callCount).to.eql(1);
+        assert.ok(result != null);
+        assert.ok(result instanceof Model);
+        assert.strictEqual(factorySpy.callCount, 1);
       });
 
       it("should return null if there is no document with the specified id", async () => {
         const result = await simpleDao.for(Model).findById(new ObjectID());
-        expect(result).to.eql(null);
+        assert.strictEqual(result, null);
       });
     });
 
@@ -780,29 +819,29 @@ describe("SimpleDao", () => {
         it("should return an array of all documents produced by the specified aggregate query", async () => {
           const query = {$group: {_id: 1, total: {$sum: "$a"}}};
           const result = await simpleDao.for(Model).findAggregate(query).toArray();
-          expect(result).to.deep.eql([{_id: 1, total: 5}]);
+          deepEqual(result, [{_id: 1, total: 5}]);
         });
 
         it("should return an array of objects that are instances of the provided class, " +
           "created via the class' .factory() method", async () => {
           const factorySpy = sandbox.spy(Model, "factory");
-          expect(factorySpy.callCount).to.eql(0);
+          assert.strictEqual(factorySpy.callCount, 0);
 
           const results = await simpleDao.for(Model).findAggregate({$group: {_id: 1, total: {$sum: "$a"}}}).toArray();
-          expect(results).to.have.length.gt(0);
-          expect(factorySpy.callCount).to.eql(results.length);
+          assert.ok(results.length > 0);
+          assert.strictEqual(factorySpy.callCount, results.length);
 
           for (const data of results) {
-            expect(data).to.be.an.instanceOf(Model);
+            assert.ok(data instanceof Model);
           }
         });
 
         it("should reject if there was an error performing the query", async () => {
           try {
             await simpleDao.for(Model).findAggregate({a: {$badOperator: 0}}).toArray();
-            expect(true).to.eql(false);
+            assert.fail("expected rejection");
           } catch (err) {
-            expect(err.message).to.eql("Unrecognized pipeline stage name: 'a'");
+            assert.strictEqual(err.message, "Unrecognized pipeline stage name: 'a'");
           }
         });
       });
@@ -810,10 +849,10 @@ describe("SimpleDao", () => {
       describe(".toCursor()", () => {
         it("should return a cursor for all documents produced by the specified aggregate query", async () => {
           const cursor = await simpleDao.for(Model).findAggregate({$match: {a: {$gt: 0}}}).toCursor();
-          expect(cursor.constructor.name).to.eql("AggregationCursor");
+          assert.strictEqual(cursor.constructor.name, "AggregationCursor");
 
           const results = await cursor.toArray();
-          expect(results).to.have.length(3);
+          assert.strictEqual(results.length, 3);
         });
       });
     });
@@ -822,42 +861,42 @@ describe("SimpleDao", () => {
       it("should reject if no query is provided", async () => {
         try {
           await simpleDao.for(Model).update();
-          expect(true).to.eql(false);
+          assert.fail("expected rejection");
         } catch (err) {
-          expect(err.message).to.eql("query can't be undefined or null");
+          assert.strictEqual(err.message, "query can't be undefined or null");
         }
       });
 
       it("should reject if no update parameter is provided", async () => {
         try {
           await simpleDao.for(Model).update({});
-          expect(true).to.eql(false);
+          assert.fail("expected rejection");
         } catch (err) {
-          expect(err.message).to.eql("update can't be undefined or null");
+          assert.strictEqual(err.message, "update can't be undefined or null");
         }
       });
 
       it("should update only one document by default", async () => {
         const result = await simpleDao.for(Model).update({}, {$set: {a: 5}});
-        expect(result).to.deep.eql({n: 1, nModified: 1, ok: 1, updatedExisting: true});
+        deepEqual(result, {n: 1, nModified: 1, ok: 1, updatedExisting: true});
       });
 
       it("should update multiple documents when the `multi: true` option is provided", async () => {
         const result = await simpleDao.for(Model).update({}, {$set: {a: 5}}, {multi: true});
-        expect(result).to.deep.eql({n: 3, nModified: 3, ok: 1, updatedExisting: true});
+        deepEqual(result, {n: 3, nModified: 3, ok: 1, updatedExisting: true});
       });
 
       it("should not update anything if the provided query matches no documents", async () => {
         const result = await simpleDao.for(Model).update({b: 1}, {$set: {a: 5}});
-        expect(result).to.deep.eql({n: 0, nModified: 0, ok: 1, updatedExisting: false});
+        deepEqual(result, {n: 0, nModified: 0, ok: 1, updatedExisting: false});
       });
 
       it("should reject if the update operation is invalid", async () => {
         try {
           await simpleDao.for(Model).update({b: 1}, {$badOperator: {a: 5}});
-          expect(true).to.eql(false);
+          assert.fail("expected rejection");
         } catch (err) {
-          expect(err.message).to.eql("Unknown modifier: $badOperator. Expected a valid update modifier or pipeline-style update specified as an array");
+          assert.strictEqual(err.message, "Unknown modifier: $badOperator. Expected a valid update modifier or pipeline-style update specified as an array");
         }
       });
 
@@ -865,9 +904,9 @@ describe("SimpleDao", () => {
         sandbox.stub(simpleDao, "connect").rejects(new Error("Some connection error"));
         try {
           await simpleDao.for(Model).update({}, {$set: {a: 5}});
-          expect(false).to.eql(true);
+          assert.fail("expected rejection");
         } catch (err) {
-          expect(err.message).to.eql("Some connection error");
+          assert.strictEqual(err.message, "Some connection error");
         }
       });
     });
@@ -878,44 +917,44 @@ describe("SimpleDao", () => {
 
         const query = {a: 2};
         const documentsPriorToRemoval = await db.collection(collectionName).find(query).toArray();
-        expect(documentsPriorToRemoval).to.have.length(2);
+        assert.strictEqual(documentsPriorToRemoval.length, 2);
 
         const result = await simpleDao.for(Model).remove(query);
-        expect(result).to.deep.eql({n: 2, ok: 1});
+        deepEqual(result, {n: 2, ok: 1});
 
         const documentsAfterRemoval = await db.collection(collectionName).find(query).toArray();
-        expect(documentsAfterRemoval.length).to.eql(0);
+        assert.strictEqual(documentsAfterRemoval.length, 0);
       });
 
       it("should remove no documents if the provided query matches no documents", async () => {
         const db = await simpleDao.connect();
 
         const allDocumentsInCollectionPriorToRemoval = await db.collection(collectionName).find({}).toArray();
-        expect(allDocumentsInCollectionPriorToRemoval).to.have.length(3);
+        assert.strictEqual(allDocumentsInCollectionPriorToRemoval.length, 3);
 
         const query = {a: 5};
         const result = await simpleDao.for(Model).remove(query);
-        expect(result).to.deep.eql({n: 0, ok: 1});
+        deepEqual(result, {n: 0, ok: 1});
 
         const allDocumentsInCollectionAfterRemoval = await db.collection(collectionName).find({}).toArray();
-        expect(allDocumentsInCollectionAfterRemoval.length).to.eql(3);
+        assert.strictEqual(allDocumentsInCollectionAfterRemoval.length, 3);
       });
 
       it("should reject if no query is provided", async () => {
         try {
           await simpleDao.for(Model).remove();
-          expect(true).to.eql(false);
+          assert.fail("expected rejection");
         } catch (err) {
-          expect(err.message).to.eql("query can't be undefined or null");
+          assert.strictEqual(err.message, "query can't be undefined or null");
         }
       });
 
       it("should reject if the query is invalid", async () => {
         try {
           await simpleDao.for(Model).remove({$badOperator: 1});
-          expect(true).to.eql(false);
+          assert.fail("expected rejection");
         } catch (err) {
-          expect(err.message).to.eql("unknown top level operator: $badOperator");
+          assert.strictEqual(err.message, "unknown top level operator: $badOperator");
         }
       });
 
@@ -923,69 +962,73 @@ describe("SimpleDao", () => {
         sandbox.stub(simpleDao, "connect").rejects(new Error("Some connection error"));
         try {
           await simpleDao.for(Model).remove({});
-          expect(false).to.eql(true);
+          assert.fail("expected rejection");
         } catch (err) {
-          expect(err.message).to.eql("Some connection error");
+          assert.strictEqual(err.message, "Some connection error");
         }
       });
     });
 
     describe(".removeById()", () => {
-      context("when the provided 'id' is an Object ID", () => {
+      describe("when the provided 'id' is an Object ID", () => {
         it("should remove the single document that has the specified id", async () => {
           const result = await simpleDao.for(Model).removeById(modelOne._id);
-          expect(result).to.deep.eql({n: 1, ok: 1});
+          deepEqual(result, {n: 1, ok: 1});
           await expectDocumentDoesNotExist(modelOne._id);
         });
       });
 
-      context("when the provided 'id' is a string", () => {
+      describe("when the provided 'id' is a string", () => {
         it("should remove the single document that has the specified id", async () => {
           const result = await simpleDao.for(Model).removeById(modelOne._id.toString());
-          expect(result).to.deep.eql({n: 1, ok: 1});
+          deepEqual(result, {n: 1, ok: 1});
           await expectDocumentDoesNotExist(modelOne._id);
         });
 
         it("should reject if the provided string is not a valid Object ID", async () => {
           try {
             await simpleDao.for(Model).removeById("1");
-            expect(true).to.be.false;
+            assert.fail("expected rejection");
           } catch (err) {
-            expect(err.message).to.eql("Argument passed in must be a single String of 12 bytes or a string of 24 hex characters");
+            assert.strictEqual(err.message, "Argument passed in must be a single String of 12 bytes or a string of 24 hex characters");
           }
         });
       });
 
       it("should do nothing if there is no document with the specified id", async () => {
         const result = await simpleDao.for(Model).removeById(new ObjectID());
-        expect(result).to.deep.eql({n: 0, ok: 1});
+        deepEqual(result, {n: 0, ok: 1});
       });
     });
 
     describe(".distinct()", () => {
       it("should return an empty array when no field is provided", async () => {
         const results = await simpleDao.for(Model).distinct();
-        expect(results).to.deep.eql([]);
+        deepEqual(results, []);
       });
 
       it("should return all distinct values for the provided field when no query is specified", async () => {
         const results = await simpleDao.for(Model).distinct("a");
-        expect(results).to.be.an("array").that.includes.members([1, 2]);
+        assert.ok(Array.isArray(results));
+        assert.ok(results.includes(1));
+        assert.ok(results.includes(2));
       });
 
       it("should return the distinct values for the provided field amongst all documents that match the provided query", async () => {
         const modelFour = Model.factory({a: 3});
         await simpleDao.save(modelFour);
         const results = await simpleDao.for(Model).distinct("a", {a: {$gt: 1}});
-        expect(results).to.be.an("array").that.includes.members([2, 3]);
+        assert.ok(Array.isArray(results));
+        assert.ok(results.includes(2));
+        assert.ok(results.includes(3));
       });
 
       it("should reject if the query is invalid", async () => {
         try {
           await simpleDao.for(Model).distinct("a", {$badOperator: 1});
-          expect(false).to.be.true;
+          assert.fail("expected rejection");
         } catch (err) {
-          expect(err.message).to.eql("unknown top level operator: $badOperator");
+          assert.strictEqual(err.message, "unknown top level operator: $badOperator");
         }
       });
 
@@ -993,9 +1036,9 @@ describe("SimpleDao", () => {
         sandbox.stub(simpleDao, "connect").rejects(new Error("Some connection error"));
         try {
           await simpleDao.for(Model).distinct("a");
-          expect(1).to.equal(0);
+          assert.fail("expected rejection");
         } catch (e) {
-          expect(e.message).to.eql("Some connection error");
+          assert.strictEqual(e.message, "Some connection error");
         }
       });
     });
