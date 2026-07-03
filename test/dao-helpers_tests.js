@@ -1,10 +1,8 @@
 const assert = require("node:assert").strict;
-const { describe, it, before, after } = require("node:test");
+const { describe, it, before, after, mock } = require("node:test");
 
 // eslint-disable-next-line max-statements
 describe("SimpleDaoArchive", () => {
-  const sinon = require("sinon");
-  const sandbox = sinon.createSandbox();
   const SimpleDao = require("../").SimpleDao;
   const SimpleDaoArchive = require("../").SimpleDaoArchive;
   const {
@@ -85,7 +83,7 @@ describe("SimpleDaoArchive", () => {
   });
 
   after(async () => {
-    sandbox.restore();
+    mock.restoreAll();
     const db1 = await simpleDao.connect();
     const db2 = await simpleDaoArchive.connect();
     try {

@@ -1,4 +1,4 @@
-const { describe, it, beforeEach, afterEach } = require("node:test");
+const { describe, it, beforeEach, afterEach, mock } = require("node:test");
 const assert = require("node:assert").strict;
 const { deepEqual } = require("node:assert");
 
@@ -9,8 +9,6 @@ describe("SimpleDao", () => {
   const {
     ObjectID, MongoClient, Cursor
   } = require("mongodb");
-  const sinon = require("sinon");
-  const sandbox = sinon.createSandbox();
   const {
     ALL_AUTH_MECHANISMS, ALL_READ_PREFERENCES
   } = require("../constants");
@@ -66,7 +64,7 @@ describe("SimpleDao", () => {
   });
 
   afterEach(async () => {
-    sandbox.restore();
+    mock.restoreAll();
 
     const db = await simpleDao.connect();
     try {
@@ -313,19 +311,19 @@ describe("SimpleDao", () => {
 
     it("should share database connections across multiple instances of the SimpleDao " +
       "when a connection to a particular database has already been established", async () => {
-      const connectionSpy = sandbox.spy(MongoClient, "connect");
+      const connectionSpy = mock.method(MongoClient, "connect");
 
-      assert.strictEqual(connectionSpy.callCount, 0);
+      assert.strictEqual(connectionSpy.mock.callCount(), 0);
       const simpleDao2 = new SimpleDao(configForOtherDatabase);
       const db2 = await simpleDao2.connect();
-      assert.strictEqual(connectionSpy.callCount, 1);
+      assert.strictEqual(connectionSpy.mock.callCount(), 1);
 
       // Create a new instance of the SimpleDao and connect to the database again.
       // Since we already connected to this database in the previous instance, we expect that connection to be re-used.
       const simpleDao3 = new SimpleDao(configForOtherDatabase);
       const db3 = await simpleDao3.connect();
       assert.strictEqual(db3 === db2, true);
-      assert.strictEqual(connectionSpy.callCount, 1);
+      assert.strictEqual(connectionSpy.mock.callCount(), 1);
 
       // Change which database we are connecting to
       configForOtherDatabase.db.options.database = "simple_dao_test_3";
@@ -334,25 +332,25 @@ describe("SimpleDao", () => {
       const simpleDao4 = new SimpleDao(configForOtherDatabase);
       const db4 = await simpleDao4.connect();
       assert.strictEqual(db4 === db3, false);
-      assert.strictEqual(connectionSpy.callCount, 2);
+      assert.strictEqual(connectionSpy.mock.callCount(), 2);
 
       // Create another instance, which should re-use the connection from the previous instance
       const simpleDao5 = new SimpleDao(configForOtherDatabase);
       const db5 = await simpleDao5.connect();
       assert.strictEqual(db5 === db4, true);
-      assert.strictEqual(connectionSpy.callCount, 2);
+      assert.strictEqual(connectionSpy.mock.callCount(), 2);
     });
 
     it("should automatically reconnect when the database connection was unexpectedly closed", async () => {
       // Change which database we are connecting to
       configForOtherDatabase.db.options.database = "simple_dao_test_4";
 
-      const connectionSpy = sandbox.spy(MongoClient, "connect");
+      const connectionSpy = mock.method(MongoClient, "connect");
 
-      assert.strictEqual(connectionSpy.callCount, 0);
+      assert.strictEqual(connectionSpy.mock.callCount(), 0);
       const simpleDao2 = new SimpleDao(configForOtherDatabase);
       const dbConnection2 = await simpleDao2.connect();
-      assert.strictEqual(connectionSpy.callCount, 1);
+      assert.strictEqual(connectionSpy.mock.callCount(), 1);
 
       // Close the database connection.
       // The next time we try to connect, we expect the simpleDao to form a new connection to the database.
@@ -361,32 +359,32 @@ describe("SimpleDao", () => {
 
       const dbConnection3 = await simpleDao2.connect();
       assert.strictEqual(dbConnection2 === dbConnection3, false);
-      assert.strictEqual(connectionSpy.callCount, 2);
+      assert.strictEqual(connectionSpy.mock.callCount(), 2);
     });
 
     it("should reconnect on subsequent calls after the initial connection rejects with an error", async () => {
       // Change which database we are connecting to
       configForOtherDatabase.db.options.database = "simple_dao_test_5";
 
-      const connectionStub = sandbox.stub(MongoClient, "connect").rejects(new Error("Some mongo error"));
+      let connectionStub = mock.method(MongoClient, "connect", async () => { throw new Error("Some mongo error"); });
 
-      assert.strictEqual(connectionStub.callCount, 0);
+      assert.strictEqual(connectionStub.mock.callCount(), 0);
       const simpleDao2 = new SimpleDao(configForOtherDatabase);
       try {
         await simpleDao2.connect();
         assert.fail();
       } catch (err) {
         assert.strictEqual(err.message, "Some mongo error");
-        assert.strictEqual(connectionStub.callCount, 1);
+        assert.strictEqual(connectionStub.mock.callCount(), 1);
       }
 
       // Allow the database connection to proceed normally, without rejection.
       // We expect the simpleDao to form a new connection to the database.
-      connectionStub.reset();
-      assert.strictEqual(connectionStub.callCount, 0);
-      connectionStub.callThrough();
+      connectionStub.mock.restore();
+      connectionStub = mock.method(MongoClient, "connect");
+      assert.strictEqual(connectionStub.mock.callCount(), 0);
       await simpleDao2.connect();
-      assert.strictEqual(connectionStub.callCount, 1);
+      assert.strictEqual(connectionStub.mock.callCount(), 1);
     });
 
     it("should connect to the database only once when multiple database requests arrive while the initial connection is still being " +
@@ -395,8 +393,8 @@ describe("SimpleDao", () => {
       configForOtherDatabase.db.options.database = "simple_dao_test_6";
       const simpleDao2 = new SimpleDao(configForOtherDatabase);
 
-      const connectionSpy = sandbox.spy(MongoClient, "connect");
-      assert.strictEqual(connectionSpy.callCount, 0);
+      const connectionSpy = mock.method(MongoClient, "connect");
+      assert.strictEqual(connectionSpy.mock.callCount(), 0);
 
       await Promise.all([
         simpleDao2.for(Model).find({}),
@@ -404,7 +402,7 @@ describe("SimpleDao", () => {
         simpleDao2.for(Model).find({})
       ]);
 
-      assert.strictEqual(connectionSpy.callCount, 1);
+      assert.strictEqual(connectionSpy.mock.callCount(), 1);
     });
   });
 
@@ -586,7 +584,7 @@ describe("SimpleDao", () => {
     });
 
     it("should reject if an error was encountered when connecting to the database", async () => {
-      sandbox.stub(simpleDao, "connect").rejects(new Error("Some connection error"));
+      mock.method(simpleDao, "connect", async () => { throw new Error("Some connection error"); });
       try {
         await simpleDao.aggregate(collectionName, {});
         assert.fail("expected rejection");
@@ -685,7 +683,7 @@ describe("SimpleDao", () => {
       });
 
       it("should reject if an error was encountered when connecting to the database", async () => {
-        sandbox.stub(simpleDao, "connect").rejects(new Error("Some connection error"));
+        mock.method(simpleDao, "connect", async () => { throw new Error("Some connection error"); });
         try {
           await simpleDao.for(Model).count({});
           assert.fail("expected rejection");
@@ -707,12 +705,12 @@ describe("SimpleDao", () => {
 
         it("should return an array of objects that are instances of the provided class, " +
           "created via the class' .factory() method", async () => {
-          const factorySpy = sandbox.spy(Model, "factory");
-          assert.strictEqual(factorySpy.callCount, 0);
+          const factorySpy = mock.method(Model, "factory");
+          assert.strictEqual(factorySpy.mock.callCount(), 0);
 
           const results = await simpleDao.for(Model).find({}).toArray();
           assert.ok(results.length > 0);
-          assert.strictEqual(factorySpy.callCount, results.length);
+          assert.strictEqual(factorySpy.mock.callCount(), results.length);
 
           for (const data of results) {
             assert.ok(data instanceof Model);
@@ -753,13 +751,13 @@ describe("SimpleDao", () => {
       });
 
       it("should return an object that is an instance of the provided class, created via the class' .factory() method", async () => {
-        const factorySpy = sandbox.spy(Model, "factory");
-        assert.strictEqual(factorySpy.callCount, 0);
+        const factorySpy = mock.method(Model, "factory");
+        assert.strictEqual(factorySpy.mock.callCount(), 0);
 
         const result = await simpleDao.for(Model).findOne({});
         assert.ok(result != null);
         assert.ok(result instanceof Model);
-        assert.strictEqual(factorySpy.callCount, 1);
+        assert.strictEqual(factorySpy.mock.callCount(), 1);
       });
 
       it("should reject if there was an error performing the query", async () => {
@@ -799,13 +797,13 @@ describe("SimpleDao", () => {
       });
 
       it("should return an object that is an instance of the provided class, created via the class' .factory() method", async () => {
-        const factorySpy = sandbox.spy(Model, "factory");
-        assert.strictEqual(factorySpy.callCount, 0);
+        const factorySpy = mock.method(Model, "factory");
+        assert.strictEqual(factorySpy.mock.callCount(), 0);
 
         const result = await simpleDao.for(Model).findById(modelOne._id);
         assert.ok(result != null);
         assert.ok(result instanceof Model);
-        assert.strictEqual(factorySpy.callCount, 1);
+        assert.strictEqual(factorySpy.mock.callCount(), 1);
       });
 
       it("should return null if there is no document with the specified id", async () => {
@@ -824,12 +822,12 @@ describe("SimpleDao", () => {
 
         it("should return an array of objects that are instances of the provided class, " +
           "created via the class' .factory() method", async () => {
-          const factorySpy = sandbox.spy(Model, "factory");
-          assert.strictEqual(factorySpy.callCount, 0);
+          const factorySpy = mock.method(Model, "factory");
+          assert.strictEqual(factorySpy.mock.callCount(), 0);
 
           const results = await simpleDao.for(Model).findAggregate({$group: {_id: 1, total: {$sum: "$a"}}}).toArray();
           assert.ok(results.length > 0);
-          assert.strictEqual(factorySpy.callCount, results.length);
+          assert.strictEqual(factorySpy.mock.callCount(), results.length);
 
           for (const data of results) {
             assert.ok(data instanceof Model);
@@ -901,7 +899,7 @@ describe("SimpleDao", () => {
       });
 
       it("should reject if an error was encountered when connecting to the database", async () => {
-        sandbox.stub(simpleDao, "connect").rejects(new Error("Some connection error"));
+        mock.method(simpleDao, "connect", async () => { throw new Error("Some connection error"); });
         try {
           await simpleDao.for(Model).update({}, {$set: {a: 5}});
           assert.fail("expected rejection");
@@ -959,7 +957,7 @@ describe("SimpleDao", () => {
       });
 
       it("should reject if an error was encountered when connecting to the database", async () => {
-        sandbox.stub(simpleDao, "connect").rejects(new Error("Some connection error"));
+        mock.method(simpleDao, "connect", async () => { throw new Error("Some connection error"); });
         try {
           await simpleDao.for(Model).remove({});
           assert.fail("expected rejection");
@@ -1033,7 +1031,7 @@ describe("SimpleDao", () => {
       });
 
       it("should reject if an error was encountered when connecting to the database", async () => {
-        sandbox.stub(simpleDao, "connect").rejects(new Error("Some connection error"));
+        mock.method(simpleDao, "connect", async () => { throw new Error("Some connection error"); });
         try {
           await simpleDao.for(Model).distinct("a");
           assert.fail("expected rejection");

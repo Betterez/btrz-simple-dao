@@ -36,8 +36,7 @@
     "mongodb": "3.6.12"
   },
   "devDependencies": {
-    "chance": "1.1.13",
-    "sinon": "21.1.2"
+    "chance": "1.1.13"
   },
   "engines": {
     "node": ">=21.7.0"
