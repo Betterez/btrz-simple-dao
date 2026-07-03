@@ -1,0 +1,18 @@
+#!/bin/sh
+# btrz-banned-libs-hook-v1
+set -eu
+
+DIFF_CONTENT=$(git diff --cached -U0 -- package.json package-lock.json npm-shrinkwrap.json yarn.lock pnpm-lock.yaml 2>/dev/null || true)
+
+if [ -z "$DIFF_CONTENT" ]; then
+  exit 0
+fi
+
+if printf '%s
+' "$DIFF_CONTENT" | rg -q '^\+.*("(lodash|mocha|chai|sinon)"|lodash@|mocha@|chai@|sinon@)'; then
+  echo ""
+  echo "Commit blocked: adding banned libraries is not allowed (lodash, mocha, chai, sinon)."
+  echo "Remove the staged dependency/lockfile additions and retry."
+  echo ""
+  exit 1
+fi

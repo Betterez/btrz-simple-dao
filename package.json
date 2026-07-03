@@ -5,7 +5,8 @@
   "main": "index.js",
   "scripts": {
     "test": "NODE_ENV=test node --test --test-force-exit --test-timeout=60000 test/dao-helpers_tests.js test/mock-simple-dao_tests.js test/operator_tests.js test/simple-dao_tests.js",
-    "tdd": "NODE_ENV=test node --test --watch --test-force-exit --test-timeout=60000 test/dao-helpers_tests.js test/mock-simple-dao_tests.js test/operator_tests.js test/simple-dao_tests.js"
+    "tdd": "NODE_ENV=test node --test --watch --test-force-exit --test-timeout=60000 test/dao-helpers_tests.js test/mock-simple-dao_tests.js test/operator_tests.js test/simple-dao_tests.js",
+    "prepare": "git config core.hooksPath .githooks"
   },
   "repository": {
     "type": "git",
