@@ -654,6 +654,64 @@ describe("SimpleDao", () => {
       const currentTimestamp = new Date().getTime();
       assert.ok(model.updatedAt.value.getTime() >= currentTimestamp - 10000 && model.updatedAt.value.getTime() <= currentTimestamp + 10000);
     });
+
+    describe("with auditor", () => {
+      function mockAuditor({strict} = {}) {
+        const calls = [];
+        return {
+          strict: Boolean(strict),
+          calls,
+          recordMongo(event) {
+            calls.push(event);
+          }
+        };
+      }
+
+      it("does not call recordMongo when no auditor is passed", async () => {
+        await simpleDao.save(Model.factory({a: 1, accountId: "acc1", updatedBy: "u1"}));
+        // no throw; default simpleDao has no auditor
+      });
+
+      it("records insert after save using model._id, updatedBy, accountId", async () => {
+        const auditor = mockAuditor();
+        const dao = new SimpleDao(config, null, auditor);
+        const saved = await dao.save(Model.factory({
+          a: 1,
+          accountId: "acc1",
+          updatedBy: "u1"
+        }));
+        assert.equal(auditor.calls.length, 1);
+        assert.equal(auditor.calls[0].operation, "insert");
+        assert.equal(String(auditor.calls[0].objectId), String(saved._id));
+        assert.equal(auditor.calls[0].userId, "u1");
+        assert.equal(auditor.calls[0].accountId, "acc1");
+        assert.equal(auditor.calls[0].collectionName, collectionName);
+        assert.equal(auditor.calls[0].payload.a, 1);
+      });
+
+      it("uses explicit userId when model.updatedBy is missing", async () => {
+        const auditor = mockAuditor();
+        const dao = new SimpleDao(config, null, auditor);
+        await dao.save(Model.factory({a: 1, accountId: "acc1"}), "explicit-user");
+        assert.equal(auditor.calls[0].userId, "explicit-user");
+      });
+
+      it("skips recordMongo when identity missing and not strict", async () => {
+        const auditor = mockAuditor({strict: false});
+        const dao = new SimpleDao(config, null, auditor);
+        await dao.save(Model.factory({a: 1}));
+        assert.equal(auditor.calls.length, 0);
+      });
+
+      it("throws after save when strict and updatedBy missing", async () => {
+        const auditor = mockAuditor({strict: true});
+        const dao = new SimpleDao(config, null, auditor);
+        await assert.rejects(
+          () => dao.save(Model.factory({a: 1, accountId: "acc1"})),
+          /audit identity missing/
+        );
+      });
+    });
   });
 
   describe("Operator methods", () => {

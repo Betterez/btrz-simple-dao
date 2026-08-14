@@ -85,9 +85,10 @@ function getCollectionName(ctrFunc) {
 const mongoClients = {};
 
 class SimpleDao {
-  constructor(options, logger) {
+  constructor(options, logger, auditor) {
     this.connectionString = getConnectionString(options.db);
     this.logger = logger;
+    this.auditor = auditor || null;
   }
 
   logError(msg, err) {
@@ -210,7 +211,7 @@ class SimpleDao {
     }
   }
 
-  async save(model) {
+  async save(model, userId) {
     if (!model) {
       throw new Error("SimpleDao: No data was provided in the call to .save()");
     }
@@ -229,12 +230,17 @@ class SimpleDao {
       if (!model._id) {
         model._id = result.result.upserted[0]._id;
       }
-
-      return model;
     } catch (err) {
       this.logError("SimpleDao: Error performing save", err);
       throw err;
     }
+
+    if (this.auditor) {
+      const {recordInsert} = require("./audit");
+      recordInsert(this.auditor, {model, collectionName, explicitUserId: userId});
+    }
+
+    return model;
   }
 }
 

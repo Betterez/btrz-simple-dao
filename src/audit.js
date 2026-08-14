@@ -62,11 +62,45 @@ function missingIdentityError(fields) {
   return new Error(`[btrz-simple-dao] audit identity missing: ${fields.join(", ")}`);
 }
 
+function recordInsert(auditor, {model, collectionName, explicitUserId}) {
+  if (!auditor) {
+    return;
+  }
+  const userId = resolveUserId({model, explicitUserId});
+  const accountId = scalarAccountId(model);
+  const objectId = model && model._id;
+  const missing = [];
+  if (!hasRequired(objectId)) {
+    missing.push("objectId");
+  }
+  if (!hasRequired(userId)) {
+    missing.push("userId");
+  }
+  if (!hasRequired(accountId)) {
+    missing.push("accountId");
+  }
+  if (missing.length) {
+    if (auditor.strict) {
+      throw missingIdentityError(missing);
+    }
+    return;
+  }
+  auditor.recordMongo({
+    accountId,
+    collectionName,
+    objectId,
+    userId,
+    operation: "insert",
+    payload: model
+  });
+}
+
 module.exports = {
   hasRequired,
   scalarId,
   idsFromQuery,
   resolveUserId,
   scalarAccountId,
-  missingIdentityError
+  missingIdentityError,
+  recordInsert
 };
