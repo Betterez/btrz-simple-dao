@@ -136,12 +136,12 @@ The aggregate method will use the following options when calling the database.
 
 `allowDiskUse` will prevent errors due to size limits on the results.
 
-### .save(model, userId?)
+### .save(model, context?)
 
 It will save the model into a collection for that model (see above on the `for` method to understand how the collection name is set).
 There is no serialization strategy at the moment so "all" public methods and properties will be saved into the database.
 
-Optional `userId` is used only when an `auditor` was passed to the constructor. `userId` is taken from this argument when provided, else `model.updatedBy`. After a successful save the auditor records `operation: "insert"` with the saved model as `payload`.
+Optional `context` is `{accountId, userId}` and is used only when an `auditor` was passed to the constructor. A string last argument is not treated as `userId`. `userId` is taken from `context.userId` when provided, else `model.updatedBy`. `accountId` is taken from `context.accountId` when provided, else `model.accountId`. After a successful save the auditor records `operation: "insert"` with the saved model as `payload`.
 
 ### .dropCollection(name)
 
@@ -205,7 +205,7 @@ An alternative to the `aggregate` method on SimpleDao, but is meant to be used w
 
     let innerCursor = simpleDao.for(Account).findAggregate([{"$match": {...}}, {"$unwind": {...}}, ...]); //Returns an inner cursor with all the aggregates for the account collection.
 
-### .removeById(id, userId?)
+### .removeById(id, context?)
 
 It will perform a `remove` on the collection that the operator have been created for (see above on the `for` method to understand how the collection name is set) with the query {_id: id}.
 
@@ -213,28 +213,28 @@ It will perform a `remove` on the collection that the operator have been created
 
 You can pass anything to the id not just ObjectID, it will depend on what do you use to generate the `_id` in the mongo collections.
 
-Optional `userId` is used only when an `auditor` was passed to the constructor.
+Optional `context` is `{accountId, userId}` and is used only when an `auditor` was passed to the constructor. `removeById` can record when `context.accountId` is provided (the query remains `{_id}`).
 
-### .remove(query, userId?)
+### .remove(query, context?)
 
 It will perform a `remove` on the collection that the operator have been created for (see above on the `for` method to understand how the collection name is set) with the given query.
 
     simpleDao.for(Account).remove({name: "super"}); //Returns a promise that will resolve to the remove result: {ok: 1, n: 5} where n is the count of deleted documents.
 
-Optional `userId` is used only when an `auditor` was passed to the constructor. When an auditor is present, `accountId` must be on the query. Matching `_id`s are resolved in parallel with the write. When `auditor.strict` is false (production), the write result is returned without waiting for audit. When `strict` is true, the method awaits audit and missing identity throws after the write. Each deleted document records `operation: "delete"` (no `payload`).
+Optional `context` is `{accountId, userId}` and is used only when an `auditor` was passed to the constructor. A string last argument is not treated as `userId`. `accountId` is taken from `context.accountId` when provided, else the query. Matching `_id`s are resolved in parallel with the write. When `auditor.strict` is false (production), the write result is returned without waiting for audit. When `strict` is true, the method awaits audit and missing identity throws after the write. Each deleted document records `operation: "delete"` (no `payload`).
 
-### .update(query, update, options, userId?)
+### .update(query, update, options, context?)
 
 It will perform an `update` on the collection that the operator have been created for (see above on the `for` method to understand how the collection name is set) with the given `query`, applying the `update` and `options`.
 The query, update and options are the same as with the node mongodb driver update method.
 
     simpleDao.for(Account).update({name: "new account"}, { $set: {name: "Peter account"}}); //Returns a promise with the result report than the node mongodb driver.
 
-Optional `userId` is the **fourth** argument so `{multi: true}` is not treated as a user id. Callers who skip `options` pass `undefined`:
+Optional `context` is `{accountId, userId}` and is the **fourth** argument so `{multi: true}` is not treated as context. Callers who skip `options` pass `undefined`:
 
-    simpleDao.for(Account).update(query, {$set: {name: "Peter account"}}, undefined, userId);
+    simpleDao.for(Account).update(query, {$set: {updatedBy}}, undefined, {accountId, userId});
 
-`userId` is taken from this argument when provided, else `update.$set.updatedBy`. `accountId` is taken from `$set.accountId` or the query; it is not loaded from the document. When an auditor is present and `_id` is not already on the query, matching `_id`s are resolved in parallel with the write. When `auditor.strict` is false, that work does not delay the returned result. When `strict` is true, the method awaits audit and missing identity throws after the write. Each written document records `operation: "update"` with the filter as `query` and the update doc as `payload`. Without `{multi: true}` only the first match is written and recorded.
+`userId` is taken from `context.userId` when provided, else `update.$set.updatedBy`. `accountId` is taken from `context.accountId` when provided, else the query or `$set.accountId`; it is not loaded from the document. When an auditor is present and `_id` is not already on the query, matching `_id`s are resolved in parallel with the write. When `auditor.strict` is false, that work does not delay the returned result. When `strict` is true, the method awaits audit and missing identity throws after the write. Each written document records `operation: "update"` with the filter as `query` and the update doc as `payload`. Without `{multi: true}` only the first match is written and recorded.
 
 ### new innerCursor() //Private
 

@@ -47,6 +47,31 @@ function resolveUserId({model, update, explicitUserId} = {}) {
   return undefined;
 }
 
+function normalizeContext(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return {};
+  }
+  return value;
+}
+
+function resolveAccountId({model, query, update, explicitAccountId} = {}) {
+  if (hasRequired(explicitAccountId)) {
+    const fromContext = scalarAccountId({accountId: explicitAccountId});
+    if (fromContext !== undefined) {
+      return fromContext;
+    }
+  }
+  const fromModel = scalarAccountId(model);
+  if (fromModel !== undefined) {
+    return fromModel;
+  }
+  const fromQuery = scalarAccountId(query);
+  if (fromQuery !== undefined) {
+    return fromQuery;
+  }
+  return scalarAccountId(update && update.$set);
+}
+
 function scalarAccountId(source) {
   if (!source) {
     return undefined;
@@ -62,21 +87,22 @@ function missingIdentityError(fields) {
   return new Error(`[btrz-simple-dao] audit identity missing: ${fields.join(", ")}`);
 }
 
-function recordInsert(auditor, {model, collectionName, explicitUserId}) {
+function recordInsert(auditor, {model, collectionName, context}) {
   if (!auditor) {
     return;
   }
-  const userId = resolveUserId({model, explicitUserId});
-  const accountId = scalarAccountId(model);
+  const {userId, accountId} = normalizeContext(context);
+  const resolvedUserId = resolveUserId({model, explicitUserId: userId});
+  const resolvedAccountId = resolveAccountId({model, explicitAccountId: accountId});
   const objectId = model && model._id;
   const missing = [];
   if (!hasRequired(objectId)) {
     missing.push("objectId");
   }
-  if (!hasRequired(userId)) {
+  if (!hasRequired(resolvedUserId)) {
     missing.push("userId");
   }
-  if (!hasRequired(accountId)) {
+  if (!hasRequired(resolvedAccountId)) {
     missing.push("accountId");
   }
   if (missing.length) {
@@ -86,10 +112,10 @@ function recordInsert(auditor, {model, collectionName, explicitUserId}) {
     return;
   }
   auditor.recordMongo({
-    accountId,
+    accountId: resolvedAccountId,
     collectionName,
     objectId,
-    userId,
+    userId: resolvedUserId,
     operation: "insert",
     payload: model
   });
@@ -179,6 +205,8 @@ module.exports = {
   scalarId,
   idsFromQuery,
   resolveUserId,
+  resolveAccountId,
+  normalizeContext,
   scalarAccountId,
   missingIdentityError,
   recordInsert,

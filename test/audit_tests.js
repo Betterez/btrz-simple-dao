@@ -4,6 +4,8 @@ const {
   hasRequired,
   idsFromQuery,
   resolveUserId,
+  resolveAccountId,
+  normalizeContext,
   scalarAccountId,
   resolveTargets,
   recordUpdates,
@@ -49,6 +51,41 @@ describe("audit helpers", () => {
 
   it("resolveUserId uses model.updatedBy", () => {
     assert.equal(resolveUserId({model: {updatedBy: "u1"}}), "u1");
+  });
+
+  it("normalizeContext returns a plain object as-is", () => {
+    const context = {accountId: "acc1", userId: "u1"};
+    assert.deepEqual(normalizeContext(context), context);
+  });
+
+  it("normalizeContext treats a string as missing context", () => {
+    assert.deepEqual(normalizeContext("u1"), {});
+  });
+
+  it("normalizeContext treats undefined and null as missing context", () => {
+    assert.deepEqual(normalizeContext(undefined), {});
+    assert.deepEqual(normalizeContext(null), {});
+  });
+
+  it("resolveAccountId prefers explicit over model, query, and $set", () => {
+    assert.equal(
+      resolveAccountId({
+        model: {accountId: "from-model"},
+        query: {accountId: "from-query"},
+        update: {$set: {accountId: "from-set"}},
+        explicitAccountId: "from-context"
+      }),
+      "from-context"
+    );
+  });
+
+  it("resolveAccountId uses model then query then $set", () => {
+    assert.equal(resolveAccountId({model: {accountId: "from-model"}}), "from-model");
+    assert.equal(
+      resolveAccountId({query: {accountId: "from-query"}, update: {$set: {accountId: "from-set"}}}),
+      "from-query"
+    );
+    assert.equal(resolveAccountId({update: {$set: {accountId: "from-set"}}}), "from-set");
   });
 
   it("scalarAccountId ignores operator objects", () => {

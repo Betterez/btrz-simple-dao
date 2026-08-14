@@ -211,7 +211,7 @@ class SimpleDao {
     }
   }
 
-  async save(model, userId) {
+  async save(model, context) {
     if (!model) {
       throw new Error("SimpleDao: No data was provided in the call to .save()");
     }
@@ -237,7 +237,7 @@ class SimpleDao {
 
     if (this.auditor) {
       const {recordInsert} = require("./audit");
-      recordInsert(this.auditor, {model, collectionName, explicitUserId: userId});
+      recordInsert(this.auditor, {model, collectionName, context});
     }
 
     return model;

@@ -689,18 +689,34 @@ describe("SimpleDao", () => {
         assert.equal(auditor.calls[0].payload.a, 1);
       });
 
-      it("uses explicit userId when model.updatedBy is missing", async () => {
+      it("uses context.userId when model.updatedBy is missing", async () => {
         const auditor = mockAuditor();
         const dao = new SimpleDao(config, null, auditor);
-        await dao.save(Model.factory({a: 1, accountId: "acc1"}), "explicit-user");
+        await dao.save(Model.factory({a: 1, accountId: "acc1"}), {userId: "explicit-user"});
         assert.equal(auditor.calls[0].userId, "explicit-user");
       });
 
-      it("uses explicit userId over model.updatedBy", async () => {
+      it("uses context.userId over model.updatedBy", async () => {
         const auditor = mockAuditor();
         const dao = new SimpleDao(config, null, auditor);
-        await dao.save(Model.factory({a: 1, accountId: "acc1", updatedBy: "from-model"}), "explicit-user");
+        await dao.save(Model.factory({a: 1, accountId: "acc1", updatedBy: "from-model"}), {userId: "explicit-user"});
         assert.equal(auditor.calls[0].userId, "explicit-user");
+      });
+
+      it("does not treat a string last argument as userId", async () => {
+        const auditor = mockAuditor({strict: false});
+        const dao = new SimpleDao(config, null, auditor);
+        await dao.save(Model.factory({a: 1, accountId: "acc1"}), "explicit-user");
+        assert.equal(auditor.calls.length, 0);
+      });
+
+      it("uses context.accountId when model has no accountId", async () => {
+        const auditor = mockAuditor();
+        const dao = new SimpleDao(config, null, auditor);
+        await dao.save(Model.factory({a: 1, updatedBy: "u1"}), {accountId: "acc-from-context"});
+        assert.equal(auditor.calls.length, 1);
+        assert.equal(auditor.calls[0].accountId, "acc-from-context");
+        assert.equal(auditor.calls[0].userId, "u1");
       });
 
       it("skips recordMongo when identity missing and not strict", async () => {
@@ -1205,9 +1221,42 @@ describe("SimpleDao", () => {
               {_id: seeded._id, accountId: "acc1"},
               {$badOperator: {a: 5}},
               undefined,
-              "u1"
+              {userId: "u1"}
             )
           );
+          assert.equal(auditor.calls.length, 0);
+        });
+
+        it("uses context.accountId and context.userId when query has neither", async () => {
+          const seeded = await simpleDao.save(Model.factory({a: 1}));
+          const auditor = mockAuditor();
+          const dao = new SimpleDao(config, null, auditor);
+          const query = {_id: seeded._id};
+          const update = {$set: {a: 9}};
+
+          await dao.for(Model).update(query, update, undefined, {
+            accountId: "acc-from-context",
+            userId: "from-context"
+          });
+
+          assert.equal(auditor.calls.length, 1);
+          assert.equal(auditor.calls[0].accountId, "acc-from-context");
+          assert.equal(auditor.calls[0].userId, "from-context");
+        });
+
+        it("does not treat a string fourth argument as userId", async () => {
+          const seeded = await simpleDao.save(Model.factory({a: 1, accountId: "acc1"}));
+          const auditor = mockAuditor({strict: false});
+          const dao = new SimpleDao(config, null, auditor);
+
+          await dao.for(Model).update(
+            {_id: seeded._id, accountId: "acc1"},
+            {$set: {a: 9}},
+            undefined,
+            "u1"
+          );
+          await waitForAuditToSettle();
+
           assert.equal(auditor.calls.length, 0);
         });
       });
@@ -1278,7 +1327,7 @@ describe("SimpleDao", () => {
           const dao = new SimpleDao(config, null, auditor);
           const query = {name: "x", accountId: "acc1"};
 
-          await dao.for(Model).remove(query, "u1");
+          await dao.for(Model).remove(query, {userId: "u1"});
           await waitForCalls(auditor, 2);
 
           assert.equal(auditor.calls.length, 2);
@@ -1348,7 +1397,7 @@ describe("SimpleDao", () => {
           const auditor = mockAuditor();
           const dao = new SimpleDao(config, null, auditor);
 
-          const result = await dao.for(Model).removeById(seeded._id, "u1");
+          const result = await dao.for(Model).removeById(seeded._id, {userId: "u1"});
           await waitForAuditToSettle();
 
           assert.equal(result.n, 1);
@@ -1361,7 +1410,7 @@ describe("SimpleDao", () => {
           const dao = new SimpleDao(config, null, auditor);
 
           await assert.rejects(
-            () => dao.for(Model).removeById(seeded._id, "u1"),
+            () => dao.for(Model).removeById(seeded._id, {userId: "u1"}),
             /audit identity missing/
           );
 
@@ -1371,13 +1420,28 @@ describe("SimpleDao", () => {
           assert.equal(auditor.calls.length, 0);
         });
 
+        it("records delete on removeById when context has accountId and userId", async () => {
+          const seeded = await simpleDao.save(Model.factory({a: 1}));
+          const auditor = mockAuditor();
+          const dao = new SimpleDao(config, null, auditor);
+
+          await dao.for(Model).removeById(seeded._id, {accountId: "acc1", userId: "u1"});
+          await waitForCalls(auditor, 1);
+
+          assert.equal(auditor.calls.length, 1);
+          assert.equal(auditor.calls[0].operation, "delete");
+          assert.equal(String(auditor.calls[0].objectId), String(seeded._id));
+          assert.equal(auditor.calls[0].accountId, "acc1");
+          assert.equal(auditor.calls[0].userId, "u1");
+        });
+
         it("records delete when remove query includes _id and accountId", async () => {
           const seeded = await simpleDao.save(Model.factory({a: 1, accountId: "acc1"}));
           const auditor = mockAuditor();
           const dao = new SimpleDao(config, null, auditor);
           const query = {_id: seeded._id, accountId: "acc1"};
 
-          await dao.for(Model).remove(query, "u1");
+          await dao.for(Model).remove(query, {userId: "u1"});
           await waitForCalls(auditor, 1);
 
           assert.equal(auditor.calls.length, 1);

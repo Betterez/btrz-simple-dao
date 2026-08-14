@@ -2,7 +2,8 @@ const InnerCursor = require("./inner-cursor").InnerCursor;
 const ObjectID = require("mongodb").ObjectID;
 const {
   resolveUserId,
-  scalarAccountId,
+  resolveAccountId,
+  normalizeContext,
   resolveTargets,
   recordUpdates,
   recordDeletes
@@ -86,7 +87,7 @@ class Operator {
     return new InnerCursor(cursorPromised, this.factory);
   }
 
-  async update(query, update, options, userId) {
+  async update(query, update, options, context) {
     if (!query) {
       throw new Error("query can't be undefined or null");
     }
@@ -101,8 +102,13 @@ class Operator {
       let resolvedUserId = undefined;
       let targetsPromise;
       if (auditor) {
+        const {userId, accountId} = normalizeContext(context);
         resolvedUserId = resolveUserId({update, explicitUserId: userId});
-        const accountIdHint = scalarAccountId(update && update.$set) || scalarAccountId(query);
+        const accountIdHint = resolveAccountId({
+          query,
+          update,
+          explicitAccountId: accountId
+        });
         // Find and update run concurrently. If multi is false, the first find
         // match may not be the document Mongo updates (no shared sort).
         targetsPromise = resolveTargets(collection, query, {accountIdHint});
@@ -135,7 +141,7 @@ class Operator {
     }
   }
 
-  async remove(query, userId) {
+  async remove(query, context) {
     if (!query) {
       throw new Error("query can't be undefined or null");
     }
@@ -147,9 +153,11 @@ class Operator {
       let resolvedUserId = undefined;
       let targetsPromise;
       if (auditor) {
+        const {userId, accountId} = normalizeContext(context);
         resolvedUserId = resolveUserId({explicitUserId: userId});
+        const accountIdHint = resolveAccountId({query, explicitAccountId: accountId});
         // Find and remove run concurrently; matched ids can drift if data changes.
-        targetsPromise = resolveTargets(collection, query, {accountIdHint: scalarAccountId(query)});
+        targetsPromise = resolveTargets(collection, query, {accountIdHint});
         if (!auditor.strict) {
           targetsPromise.catch(() => {});
         }
@@ -175,14 +183,14 @@ class Operator {
     }
   }
 
-  async removeById(id, userId) {
+  async removeById(id, context) {
     let _id = id;
 
     if (typeof id === "string") {
       _id = new ObjectID(id);
     }
 
-    return this.remove({_id}, userId);
+    return this.remove({_id}, context);
   }
 
   async distinct(field, query) {
