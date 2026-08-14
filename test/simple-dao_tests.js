@@ -1069,6 +1069,23 @@ describe("SimpleDao", () => {
           assert.equal(auditor.calls.length, 0);
         });
 
+        it("throws before write when strict and matched doc has no accountId", async () => {
+          const seeded = await simpleDao.save(Model.factory({name: "x", a: 1}));
+          const auditor = mockAuditor({strict: true});
+          const dao = new SimpleDao(config, null, auditor);
+
+          await assert.rejects(
+            () => dao.for(Model).update({name: "x"}, {$set: {a: 99, updatedBy: "u1"}}),
+            /audit identity missing/
+          );
+
+          const db = await dao.connect();
+          const doc = await db.collection(collectionName).findOne({_id: seeded._id});
+          assert.equal(doc.a, 1);
+          assert.equal(doc.name, "x");
+          assert.equal(auditor.calls.length, 0);
+        });
+
         it("does not call recordMongo when update throws", async () => {
           const seeded = await simpleDao.save(Model.factory({a: 1, accountId: "acc1"}));
           const auditor = mockAuditor();

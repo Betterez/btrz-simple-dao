@@ -91,6 +91,13 @@ describe("audit helpers", () => {
     );
   });
 
+  it("throwIfStrictMissing throws when strict and target accountId is missing", () => {
+    assert.throws(
+      () => throwIfStrictMissing({strict: true}, "u1", [{_id: "id1"}]),
+      /audit identity missing/
+    );
+  });
+
   it("throwIfStrictMissing does not throw on empty targets", () => {
     throwIfStrictMissing({strict: true}, "u1", []);
   });
