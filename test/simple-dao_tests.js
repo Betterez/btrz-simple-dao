@@ -1022,6 +1022,26 @@ describe("SimpleDao", () => {
           }
         });
 
+        it("records one update event when query matches several docs and multi is false", async () => {
+          await simpleDao.save(Model.factory({name: "x", accountId: "acc1"}));
+          await simpleDao.save(Model.factory({name: "x", accountId: "acc1"}));
+          const auditor = mockAuditor();
+          const dao = new SimpleDao(config, null, auditor);
+          const query = {name: "x"};
+          const update = {$set: {flag: "updated", updatedBy: "u1"}};
+
+          const result = await dao.for(Model).update(query, update);
+
+          assert.equal(result.n, 1);
+          assert.equal(auditor.calls.length, 1);
+
+          const db = await dao.connect();
+          const docs = await db.collection(collectionName).find({name: "x"}).toArray();
+          const updated = docs.filter((doc) => doc.flag === "updated");
+          assert.equal(updated.length, 1);
+          assert.equal(String(auditor.calls[0].objectId), String(updated[0]._id));
+        });
+
         it("emits no events when update matches nothing", async () => {
           await simpleDao.save(Model.factory({name: "x", accountId: "acc1"}));
           const auditor = mockAuditor();

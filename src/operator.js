@@ -95,6 +95,9 @@ class Operator {
         resolvedUserId = resolveUserId({update, explicitUserId: userId});
         const accountIdHint = scalarAccountId(update && update.$set) || scalarAccountId(query);
         targets = await resolveTargets(collection, query, {accountIdHint});
+        if (!options || options.multi !== true) {
+          targets = targets.slice(0, 1);
+        }
         throwIfStrictMissing(auditor, resolvedUserId, targets);
       }
       const result = await collection.update(query, update, Operator.cleanOptions(options));
