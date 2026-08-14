@@ -76,16 +76,16 @@ If `_id` is known but `accountId` is not, still find `{_id, accountId}`.
 ## When to throw (`auditor.strict === true`)
 
 - **save:** Mongo write first (need generated `_id`). Then if `_id`, `userId`, or `accountId` is still missing, throw.
-- **update / remove:** if `userId` is missing, throw **before** the write. After resolving targets, if any target is missing `accountId` or `_id`, throw **before** the write.
+- **update / remove:** Mongo write first (find for `_id`s runs concurrently). Then await audit. If `userId` is missing, or any target is missing `accountId` / `_id`, throw after the write.
 - Empty find result is not a throw.
 
-When `strict` is false/absent: missing identity → skip `recordMongo` for that document (or all, if `userId` is missing); never throw from audit. Still perform the Mongo write.
+When `strict` is false/absent: missing identity → skip `recordMongo` for that document (or all, if `userId` is missing); never throw from audit. Still perform the Mongo write. `update` / `remove` return without waiting for audit (fire-and-forget).
 
-If `recordMongo` itself throws (panopticon `strict`), let it propagate after the write for save; for update/remove, identity should already be valid so panopticon should not throw.
+If `recordMongo` itself throws (panopticon `strict`), let it propagate after the write when `auditor.strict` is true.
 
 Do not call `recordMongo` if the Mongo write threw.
 
-Do not `await` `recordMongo` (it returns `undefined`).
+Do not `await` `recordMongo` itself (it returns `undefined`). Do await the audit helper (`recordUpdates` / `recordDeletes`) when `auditor.strict` is true.
 
 ## Event shapes
 

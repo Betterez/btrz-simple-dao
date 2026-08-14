@@ -8,6 +8,16 @@ const {
   recordDeletes
 } = require("./audit");
 
+async function settleAudit(simpleDao, auditor, auditPromise, logMessage) {
+  if (auditor.strict) {
+    await auditPromise;
+    return;
+  }
+  auditPromise.catch((err) => {
+    simpleDao.logError(logMessage, err);
+  });
+}
+
 class Operator {
   constructor(simpleDao, collectionName, factory) {
     this.simpleDao = simpleDao;
@@ -96,22 +106,27 @@ class Operator {
         // Find and update run concurrently. If multi is false, the first find
         // match may not be the document Mongo updates (no shared sort).
         targetsPromise = resolveTargets(collection, query, {accountIdHint});
-        targetsPromise.catch(() => {});
+        if (!auditor.strict) {
+          targetsPromise.catch(() => {});
+        }
       }
       const result = await collection.update(query, update, Operator.cleanOptions(options));
       const endResult = result.result;
       endResult.updatedExisting = endResult.nModified > 0;
       if (auditor) {
-        recordUpdates(auditor, {
-          targets: targetsPromise,
-          collectionName: this.collectionName,
-          userId: resolvedUserId,
-          query,
-          payload: update,
-          multi: Boolean(options && options.multi)
-        }).catch((err) => {
-          this.simpleDao.logError("SimpleDao: Error performing update audit", err);
-        });
+        await settleAudit(
+          this.simpleDao,
+          auditor,
+          recordUpdates(auditor, {
+            targets: targetsPromise,
+            collectionName: this.collectionName,
+            userId: resolvedUserId,
+            query,
+            payload: update,
+            multi: Boolean(options && options.multi)
+          }),
+          "SimpleDao: Error performing update audit"
+        );
       }
       return endResult;
     } catch (err) {
@@ -135,18 +150,23 @@ class Operator {
         resolvedUserId = resolveUserId({explicitUserId: userId});
         // Find and remove run concurrently; matched ids can drift if data changes.
         targetsPromise = resolveTargets(collection, query, {accountIdHint: scalarAccountId(query)});
-        targetsPromise.catch(() => {});
+        if (!auditor.strict) {
+          targetsPromise.catch(() => {});
+        }
       }
       const result = await collection.remove(query);
       if (auditor) {
-        recordDeletes(auditor, {
-          targets: targetsPromise,
-          collectionName: this.collectionName,
-          userId: resolvedUserId,
-          query
-        }).catch((err) => {
-          this.simpleDao.logError("SimpleDao: Error performing remove audit", err);
-        });
+        await settleAudit(
+          this.simpleDao,
+          auditor,
+          recordDeletes(auditor, {
+            targets: targetsPromise,
+            collectionName: this.collectionName,
+            userId: resolvedUserId,
+            query
+          }),
+          "SimpleDao: Error performing remove audit"
+        );
       }
       return result.result;
     } catch (err) {

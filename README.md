@@ -57,7 +57,7 @@ Logger is expected to implement the `.info` and `.error` methods.
 Changed in v4.7.0 we added the optional `auditor` parameter. When omitted, `null`, or `undefined`, writes behave as before (no extra `find`). When present, each successful write records one event per written document via `auditor.recordMongo`. This library does not depend on `btrz-panopticon`; the auditor is duck-typed:
 
     auditor = {
-      strict: false, // when true, missing objectId/userId/accountId throws
+      strict: false, // when true, missing identity throws and update/remove await audit; when false, audit is fire-and-forget
       recordMongo({accountId, collectionName, objectId, userId, operation, query, payload}) {}
     };
 
@@ -221,7 +221,7 @@ It will perform a `remove` on the collection that the operator have been created
 
     simpleDao.for(Account).remove({name: "super"}); //Returns a promise that will resolve to the remove result: {ok: 1, n: 5} where n is the count of deleted documents.
 
-Optional `userId` is used only when an `auditor` was passed to the constructor. When an auditor is present, `accountId` must be on the query. Matching `_id`s are resolved in parallel with the write. The write result is returned without waiting for audit. Each deleted document records `operation: "delete"` (no `payload`).
+Optional `userId` is used only when an `auditor` was passed to the constructor. When an auditor is present, `accountId` must be on the query. Matching `_id`s are resolved in parallel with the write. When `auditor.strict` is false (production), the write result is returned without waiting for audit. When `strict` is true, the method awaits audit and missing identity throws after the write. Each deleted document records `operation: "delete"` (no `payload`).
 
 ### .update(query, update, options, userId?)
 
@@ -234,7 +234,7 @@ Optional `userId` is the **fourth** argument so `{multi: true}` is not treated a
 
     simpleDao.for(Account).update(query, {$set: {name: "Peter account"}}, undefined, userId);
 
-`userId` is taken from this argument when provided, else `update.$set.updatedBy`. `accountId` is taken from `$set.accountId` or the query; it is not loaded from the document. When an auditor is present and `_id` is not already on the query, matching `_id`s are resolved in parallel with the write and do not delay the returned result. Each written document records `operation: "update"` with the filter as `query` and the update doc as `payload`. Without `{multi: true}` only the first match is written and recorded.
+`userId` is taken from this argument when provided, else `update.$set.updatedBy`. `accountId` is taken from `$set.accountId` or the query; it is not loaded from the document. When an auditor is present and `_id` is not already on the query, matching `_id`s are resolved in parallel with the write. When `auditor.strict` is false, that work does not delay the returned result. When `strict` is true, the method awaits audit and missing identity throws after the write. Each written document records `operation: "update"` with the filter as `query` and the update doc as `payload`. Without `{multi: true}` only the first match is written and recorded.
 
 ### new innerCursor() //Private
 

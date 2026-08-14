@@ -1077,35 +1077,85 @@ describe("SimpleDao", () => {
           assert.equal(auditor.calls.length, 0);
         });
 
-        it("writes and does not reject when strict and userId is missing", async () => {
+        it("writes then rejects when strict and userId is missing", async () => {
           const seeded = await simpleDao.save(Model.factory({a: 1, accountId: "acc1"}));
           const auditor = mockAuditor({strict: true});
           const dao = new SimpleDao(config, null, auditor);
 
-          const result = await dao.for(Model).update({_id: seeded._id, accountId: "acc1"}, {$set: {a: 99}});
-          await waitForAuditToSettle();
+          await assert.rejects(
+            () => dao.for(Model).update({_id: seeded._id, accountId: "acc1"}, {$set: {a: 99}}),
+            /audit identity missing/
+          );
 
-          assert.equal(result.n, 1);
           const db = await dao.connect();
           const doc = await db.collection(collectionName).findOne({_id: seeded._id});
           assert.equal(doc.a, 99);
           assert.equal(auditor.calls.length, 0);
         });
 
-        it("writes and does not reject when strict and accountId is missing from the query", async () => {
+        it("writes then rejects when strict and accountId is missing from the query", async () => {
           const seeded = await simpleDao.save(Model.factory({name: "x", a: 1, accountId: "acc1"}));
           const auditor = mockAuditor({strict: true});
           const dao = new SimpleDao(config, null, auditor);
 
-          const result = await dao.for(Model).update({name: "x"}, {$set: {a: 99, updatedBy: "u1"}});
-          await waitForAuditToSettle();
+          await assert.rejects(
+            () => dao.for(Model).update({name: "x"}, {$set: {a: 99, updatedBy: "u1"}}),
+            /audit identity missing/
+          );
 
-          assert.equal(result.n, 1);
           const db = await dao.connect();
           const doc = await db.collection(collectionName).findOne({_id: seeded._id});
           assert.equal(doc.a, 99);
           assert.equal(doc.name, "x");
           assert.equal(auditor.calls.length, 0);
+        });
+
+        it("awaits the audit before returning when strict", async () => {
+          await simpleDao.save(Model.factory({name: "x", a: 1, accountId: "acc1"}));
+          const auditor = mockAuditor({strict: true});
+          const dao = new SimpleDao(config, null, auditor);
+          let releaseFind;
+          const findGate = new Promise((resolve) => {
+            releaseFind = resolve;
+          });
+          const originalFind = Collection.prototype.find;
+          mock.method(Collection.prototype, "find", function (...args) {
+            const cursor = originalFind.apply(this, args);
+            const toArray = cursor.toArray.bind(cursor);
+            cursor.toArray = async () => {
+              await findGate;
+              return toArray();
+            };
+            return cursor;
+          });
+
+          let settled = false;
+          const updatePromise = dao.for(Model).update(
+            {name: "x", accountId: "acc1"},
+            {$set: {a: 9, updatedBy: "u1"}}
+          ).then((result) => {
+            settled = true;
+            return result;
+          });
+
+          const db = await dao.connect();
+          let doc;
+          const deadline = Date.now() + 1000;
+          while (Date.now() < deadline) {
+            doc = await db.collection(collectionName).findOne({name: "x"});
+            if (doc && doc.a === 9) {
+              break;
+            }
+            await new Promise((resolve) => setImmediate(resolve));
+          }
+          assert.equal(doc.a, 9);
+          assert.equal(settled, false);
+          assert.equal(auditor.calls.length, 0);
+
+          releaseFind();
+          const result = await updatePromise;
+          assert.equal(result.n, 1);
+          assert.equal(auditor.calls.length, 1);
         });
 
         it("does not wait for the target find before writing the update", async () => {
@@ -1242,6 +1292,22 @@ describe("SimpleDao", () => {
             assert.equal("payload" in event, false);
           }
         });
+
+        it("writes then rejects when strict and userId is missing", async () => {
+          const seeded = await simpleDao.save(Model.factory({name: "x", accountId: "acc1"}));
+          const auditor = mockAuditor({strict: true});
+          const dao = new SimpleDao(config, null, auditor);
+
+          await assert.rejects(
+            () => dao.for(Model).remove({name: "x", accountId: "acc1"}),
+            /audit identity missing/
+          );
+
+          const db = await dao.connect();
+          const doc = await db.collection(collectionName).findOne({_id: seeded._id});
+          assert.equal(doc, null);
+          assert.equal(auditor.calls.length, 0);
+        });
       });
     });
 
@@ -1286,6 +1352,22 @@ describe("SimpleDao", () => {
           await waitForAuditToSettle();
 
           assert.equal(result.n, 1);
+          assert.equal(auditor.calls.length, 0);
+        });
+
+        it("writes then rejects on removeById when strict because accountId is not on the query", async () => {
+          const seeded = await simpleDao.save(Model.factory({a: 1, accountId: "acc1"}));
+          const auditor = mockAuditor({strict: true});
+          const dao = new SimpleDao(config, null, auditor);
+
+          await assert.rejects(
+            () => dao.for(Model).removeById(seeded._id, "u1"),
+            /audit identity missing/
+          );
+
+          const db = await dao.connect();
+          const doc = await db.collection(collectionName).findOne({_id: seeded._id});
+          assert.equal(doc, null);
           assert.equal(auditor.calls.length, 0);
         });
 
