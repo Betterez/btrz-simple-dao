@@ -1,5 +1,14 @@
 const InnerCursor = require("./inner-cursor").InnerCursor;
 const ObjectID = require("mongodb").ObjectID;
+const {
+  resolveUserId,
+  scalarAccountId,
+  resolveTargets,
+  recordUpdates,
+  recordDeletes,
+  throwIfStrictMissing
+} = require("./audit");
+
 class Operator {
   constructor(simpleDao, collectionName, factory) {
     this.simpleDao = simpleDao;
@@ -68,7 +77,7 @@ class Operator {
     return new InnerCursor(cursorPromised, this.factory);
   }
 
-  async update(query, update, options) {
+  async update(query, update, options, userId) {
     if (!query) {
       throw new Error("query can't be undefined or null");
     }
@@ -79,9 +88,27 @@ class Operator {
     try {
       const db = await this.simpleDao.connect();
       const collection = db.collection(this.collectionName);
+      const auditor = this.simpleDao.auditor;
+      let resolvedUserId = undefined;
+      let targets = [];
+      if (auditor) {
+        resolvedUserId = resolveUserId({update, explicitUserId: userId});
+        const accountIdHint = scalarAccountId(update && update.$set) || scalarAccountId(query);
+        targets = await resolveTargets(collection, query, {accountIdHint});
+        throwIfStrictMissing(auditor, resolvedUserId, targets);
+      }
       const result = await collection.update(query, update, Operator.cleanOptions(options));
       const endResult = result.result;
       endResult.updatedExisting = endResult.nModified > 0;
+      if (auditor) {
+        recordUpdates(auditor, {
+          targets,
+          collectionName: this.collectionName,
+          userId: resolvedUserId,
+          query,
+          payload: update
+        });
+      }
       return endResult;
     } catch (err) {
       this.simpleDao.logError("SimpleDao: Error performing update", err);
@@ -89,14 +116,31 @@ class Operator {
     }
   }
 
-  async remove(query) {
+  async remove(query, userId) {
     if (!query) {
       throw new Error("query can't be undefined or null");
     }
 
     try {
       const db = await this.simpleDao.connect();
-      const result = await db.collection(this.collectionName).remove(query);
+      const collection = db.collection(this.collectionName);
+      const auditor = this.simpleDao.auditor;
+      let resolvedUserId = undefined;
+      let targets = [];
+      if (auditor) {
+        resolvedUserId = resolveUserId({explicitUserId: userId});
+        targets = await resolveTargets(collection, query, {accountIdHint: scalarAccountId(query)});
+        throwIfStrictMissing(auditor, resolvedUserId, targets);
+      }
+      const result = await collection.remove(query);
+      if (auditor) {
+        recordDeletes(auditor, {
+          targets,
+          collectionName: this.collectionName,
+          userId: resolvedUserId,
+          query
+        });
+      }
       return result.result;
     } catch (err) {
       this.simpleDao.logError("SimpleDao: Error performing remove", err);
@@ -104,14 +148,14 @@ class Operator {
     }
   }
 
-  async removeById(id) {
+  async removeById(id, userId) {
     let _id = id;
 
     if (typeof id === "string") {
       _id = new ObjectID(id);
     }
 
-    return this.remove({_id});
+    return this.remove({_id}, userId);
   }
 
   async distinct(field, query) {

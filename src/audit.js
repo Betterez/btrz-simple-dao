@@ -25,7 +25,7 @@ function idsFromQuery(query) {
     return {kind: "unknown"};
   }
   const id = scalarId(query._id);
-  if (id) {
+  if (id != null) {
     return {kind: "ids", ids: [id]};
   }
   if (query._id.$in && Array.isArray(query._id.$in)) {
@@ -95,6 +95,74 @@ function recordInsert(auditor, {model, collectionName, explicitUserId}) {
   });
 }
 
+async function resolveTargets(collection, query, {accountIdHint} = {}) {
+  const fromQuery = idsFromQuery(query);
+  const accountId = accountIdHint || scalarAccountId(query);
+  if (fromQuery.kind === "ids" && hasRequired(accountId)) {
+    return fromQuery.ids.map((_id) => ({_id, accountId}));
+  }
+  const docs = await collection.find(query, {projection: {_id: 1, accountId: 1}}).toArray();
+  return docs.map((doc) => ({
+    _id: doc._id,
+    accountId: hasRequired(accountId) ? accountId : doc.accountId
+  }));
+}
+
+function recordUpdates(auditor, {targets, collectionName, userId, query, payload}) {
+  if (!auditor || !hasRequired(userId)) {
+    return;
+  }
+  for (const target of targets) {
+    if (!hasRequired(target._id) || !hasRequired(target.accountId)) {
+      continue;
+    }
+    auditor.recordMongo({
+      accountId: target.accountId,
+      collectionName,
+      objectId: target._id,
+      userId,
+      operation: "update",
+      query,
+      payload
+    });
+  }
+}
+
+function recordDeletes(auditor, {targets, collectionName, userId, query}) {
+  if (!auditor || !hasRequired(userId)) {
+    return;
+  }
+  for (const target of targets) {
+    if (!hasRequired(target._id) || !hasRequired(target.accountId)) {
+      continue;
+    }
+    auditor.recordMongo({
+      accountId: target.accountId,
+      collectionName,
+      objectId: target._id,
+      userId,
+      operation: "delete",
+      query
+    });
+  }
+}
+
+function throwIfStrictMissing(auditor, userId, targets) {
+  if (!auditor || !auditor.strict) {
+    return;
+  }
+  if (!hasRequired(userId)) {
+    throw missingIdentityError(["userId"]);
+  }
+  if (!targets.length) {
+    return;
+  }
+  const missingAccount = targets.some((t) => !hasRequired(t.accountId) || !hasRequired(t._id));
+  if (missingAccount) {
+    throw missingIdentityError(["accountId"]);
+  }
+}
+
 module.exports = {
   hasRequired,
   scalarId,
@@ -102,5 +170,9 @@ module.exports = {
   resolveUserId,
   scalarAccountId,
   missingIdentityError,
-  recordInsert
+  recordInsert,
+  resolveTargets,
+  recordUpdates,
+  recordDeletes,
+  throwIfStrictMissing
 };
