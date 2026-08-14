@@ -35,14 +35,14 @@ function idsFromQuery(query) {
 }
 
 function resolveUserId({model, update, explicitUserId} = {}) {
+  if (hasRequired(explicitUserId)) {
+    return explicitUserId;
+  }
   if (model && hasRequired(model.updatedBy)) {
     return model.updatedBy;
   }
   if (update && update.$set && hasRequired(update.$set.updatedBy)) {
     return update.$set.updatedBy;
-  }
-  if (hasRequired(explicitUserId)) {
-    return explicitUserId;
   }
   return undefined;
 }
@@ -98,21 +98,27 @@ function recordInsert(auditor, {model, collectionName, explicitUserId}) {
 async function resolveTargets(collection, query, {accountIdHint} = {}) {
   const fromQuery = idsFromQuery(query);
   const accountId = accountIdHint || scalarAccountId(query);
-  if (fromQuery.kind === "ids" && hasRequired(accountId)) {
+  if (fromQuery.kind === "ids") {
     return fromQuery.ids.map((_id) => ({_id, accountId}));
   }
-  const docs = await collection.find(query, {projection: {_id: 1, accountId: 1}}).toArray();
+  const docs = await collection.find(query, {projection: {_id: 1}}).toArray();
   return docs.map((doc) => ({
     _id: doc._id,
-    accountId: hasRequired(accountId) ? accountId : doc.accountId
+    accountId
   }));
 }
 
-function recordUpdates(auditor, {targets, collectionName, userId, query, payload}) {
-  if (!auditor || !hasRequired(userId)) {
+async function recordUpdates(auditor, {targets, collectionName, userId, query, payload, multi}) {
+  if (!auditor) {
     return;
   }
-  for (const target of targets) {
+  const resolved = await Promise.resolve(targets);
+  const list = multi === true ? resolved : resolved.slice(0, 1);
+  throwIfStrictMissing(auditor, userId, list);
+  if (!hasRequired(userId)) {
+    return;
+  }
+  for (const target of list) {
     if (!hasRequired(target._id) || !hasRequired(target.accountId)) {
       continue;
     }
@@ -128,11 +134,16 @@ function recordUpdates(auditor, {targets, collectionName, userId, query, payload
   }
 }
 
-function recordDeletes(auditor, {targets, collectionName, userId, query}) {
-  if (!auditor || !hasRequired(userId)) {
+async function recordDeletes(auditor, {targets, collectionName, userId, query}) {
+  if (!auditor) {
     return;
   }
-  for (const target of targets) {
+  const list = await Promise.resolve(targets);
+  throwIfStrictMissing(auditor, userId, list);
+  if (!hasRequired(userId)) {
+    return;
+  }
+  for (const target of list) {
     if (!hasRequired(target._id) || !hasRequired(target.accountId)) {
       continue;
     }

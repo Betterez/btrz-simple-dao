@@ -49,10 +49,17 @@ Or if you much rather use a stream (changed API on 2.0 toCursor returns a promis
 
 ## Api
 
-### new SimpleDao(config, logger)
+### new SimpleDao(config, logger, auditor?)
 
 Changed in v2.0 we added the logger non mandatory parameter.
 Logger is expected to implement the `.info` and `.error` methods.
+
+Changed in v4.7.0 we added the optional `auditor` parameter. When omitted, `null`, or `undefined`, writes behave as before (no extra `find`). When present, each successful write records one event per written document via `auditor.recordMongo`. This library does not depend on `btrz-panopticon`; the auditor is duck-typed:
+
+    auditor = {
+      strict: false, // when true, missing objectId/userId/accountId throws
+      recordMongo({accountId, collectionName, objectId, userId, operation, query, payload}) {}
+    };
 
 Creates a new instance of a simple dao.
 The `config` argument is expected to have the form.
@@ -129,10 +136,12 @@ The aggregate method will use the following options when calling the database.
 
 `allowDiskUse` will prevent errors due to size limits on the results.
 
-### .save(model)
+### .save(model, userId?)
 
 It will save the model into a collection for that model (see above on the `for` method to understand how the collection name is set).
 There is no serialization strategy at the moment so "all" public methods and properties will be saved into the database.
+
+Optional `userId` is used only when an `auditor` was passed to the constructor. `userId` is taken from this argument when provided, else `model.updatedBy`. After a successful save the auditor records `operation: "insert"` with the saved model as `payload`.
 
 ### .dropCollection(name)
 
@@ -196,7 +205,7 @@ An alternative to the `aggregate` method on SimpleDao, but is meant to be used w
 
     let innerCursor = simpleDao.for(Account).findAggregate([{"$match": {...}}, {"$unwind": {...}}, ...]); //Returns an inner cursor with all the aggregates for the account collection.
 
-### .removeById(id)
+### .removeById(id, userId?)
 
 It will perform a `remove` on the collection that the operator have been created for (see above on the `for` method to understand how the collection name is set) with the query {_id: id}.
 
@@ -204,18 +213,28 @@ It will perform a `remove` on the collection that the operator have been created
 
 You can pass anything to the id not just ObjectID, it will depend on what do you use to generate the `_id` in the mongo collections.
 
-### .remove(query)
+Optional `userId` is used only when an `auditor` was passed to the constructor.
+
+### .remove(query, userId?)
 
 It will perform a `remove` on the collection that the operator have been created for (see above on the `for` method to understand how the collection name is set) with the given query.
 
     simpleDao.for(Account).remove({name: "super"}); //Returns a promise that will resolve to the remove result: {ok: 1, n: 5} where n is the count of deleted documents.
 
-### .update(query, update, options)
+Optional `userId` is used only when an `auditor` was passed to the constructor. When an auditor is present, `accountId` must be on the query. Matching `_id`s are resolved in parallel with the write. The write result is returned without waiting for audit. Each deleted document records `operation: "delete"` (no `payload`).
+
+### .update(query, update, options, userId?)
 
 It will perform an `update` on the collection that the operator have been created for (see above on the `for` method to understand how the collection name is set) with the given `query`, applying the `update` and `options`.
 The query, update and options are the same as with the node mongodb driver update method.
 
     simpleDao.for(Account).update({name: "new account"}, { $set: {name: "Peter account"}}); //Returns a promise with the result report than the node mongodb driver.
+
+Optional `userId` is the **fourth** argument so `{multi: true}` is not treated as a user id. Callers who skip `options` pass `undefined`:
+
+    simpleDao.for(Account).update(query, {$set: {name: "Peter account"}}, undefined, userId);
+
+`userId` is taken from this argument when provided, else `update.$set.updatedBy`. `accountId` is taken from `$set.accountId` or the query; it is not loaded from the document. When an auditor is present and `_id` is not already on the query, matching `_id`s are resolved in parallel with the write and do not delay the returned result. Each written document records `operation: "update"` with the filter as `query` and the update doc as `payload`. Without `{multi: true}` only the first match is written and recorded.
 
 ### new innerCursor() //Private
 

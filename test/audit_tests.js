@@ -32,11 +32,15 @@ describe("audit helpers", () => {
     assert.deepEqual(idsFromQuery({_id: false}), {kind: "ids", ids: [false]});
   });
 
-  it("resolveUserId prefers $set.updatedBy over explicit", () => {
+  it("resolveUserId prefers explicit over $set.updatedBy", () => {
     assert.equal(
       resolveUserId({update: {$set: {updatedBy: "from-set"}}, explicitUserId: "arg"}),
-      "from-set"
+      "arg"
     );
+  });
+
+  it("resolveUserId prefers explicit over model.updatedBy", () => {
+    assert.equal(resolveUserId({model: {updatedBy: "u1"}, explicitUserId: "arg"}), "arg");
   });
 
   it("resolveUserId uses explicit when updatedBy missing", () => {
@@ -57,7 +61,7 @@ describe("audit helpers", () => {
     assert.equal(hasRequired("u"), true);
   });
 
-  it("resolveTargets skips find when _id and accountId are known", async () => {
+  it("resolveTargets skips find when _id is known", async () => {
     let findCalled = false;
     const collection = {
       find() {
@@ -70,18 +74,30 @@ describe("audit helpers", () => {
     assert.deepEqual(targets, [{_id: "id1", accountId: "acc1"}]);
   });
 
-  it("resolveTargets finds when accountId is missing", async () => {
-    let findQuery = null;
+  it("resolveTargets skips find when _id is known even without accountId", async () => {
+    let findCalled = false;
     const collection = {
-      find(query) {
-        findQuery = query;
+      find() {
+        findCalled = true;
         return {toArray: async () => [{_id: "id1", accountId: "from-doc"}]};
       }
     };
-    const query = {_id: "id1"};
-    const targets = await resolveTargets(collection, query);
-    assert.deepEqual(findQuery, query);
-    assert.deepEqual(targets, [{_id: "id1", accountId: "from-doc"}]);
+    const targets = await resolveTargets(collection, {_id: "id1"});
+    assert.equal(findCalled, false);
+    assert.deepEqual(targets, [{_id: "id1", accountId: undefined}]);
+  });
+
+  it("resolveTargets finds _id and uses accountId from the query, not the document", async () => {
+    let findOptions = null;
+    const collection = {
+      find(query, options) {
+        findOptions = options;
+        return {toArray: async () => [{_id: "id1", accountId: "from-doc"}]};
+      }
+    };
+    const targets = await resolveTargets(collection, {name: "x", accountId: "acc1"});
+    assert.deepEqual(findOptions, {projection: {_id: 1}});
+    assert.deepEqual(targets, [{_id: "id1", accountId: "acc1"}]);
   });
 
   it("throwIfStrictMissing throws when strict and userId is missing", () => {
@@ -102,9 +118,9 @@ describe("audit helpers", () => {
     throwIfStrictMissing({strict: true}, "u1", []);
   });
 
-  it("recordUpdates skips when userId is missing", () => {
+  it("recordUpdates skips when userId is missing", async () => {
     const calls = [];
-    recordUpdates({recordMongo(event) { calls.push(event); }}, {
+    await recordUpdates({recordMongo(event) { calls.push(event); }}, {
       targets: [{_id: "1", accountId: "a"}],
       collectionName: "c",
       userId: undefined,
@@ -114,9 +130,26 @@ describe("audit helpers", () => {
     assert.equal(calls.length, 0);
   });
 
-  it("recordDeletes omits payload", () => {
+  it("recordUpdates awaits a targets promise and records one event when multi is false", async () => {
     const calls = [];
-    recordDeletes({recordMongo(event) { calls.push(event); }}, {
+    await recordUpdates({recordMongo(event) { calls.push(event); }}, {
+      targets: Promise.resolve([
+        {_id: "1", accountId: "a"},
+        {_id: "2", accountId: "a"}
+      ]),
+      collectionName: "c",
+      userId: "u1",
+      query: {name: "x"},
+      payload: {$set: {a: 1}},
+      multi: false
+    });
+    assert.equal(calls.length, 1);
+    assert.equal(calls[0].objectId, "1");
+  });
+
+  it("recordDeletes omits payload", async () => {
+    const calls = [];
+    await recordDeletes({recordMongo(event) { calls.push(event); }}, {
       targets: [{_id: "1", accountId: "a"}],
       collectionName: "c",
       userId: "u1",
