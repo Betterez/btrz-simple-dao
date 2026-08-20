@@ -54,12 +54,7 @@ Or if you much rather use a stream (changed API on 2.0 toCursor returns a promis
 Changed in v2.0 we added the logger non mandatory parameter.
 Logger is expected to implement the `.info` and `.error` methods.
 
-Changed in v4.7.0 we added the optional `auditor` parameter. When omitted, `null`, or `undefined`, writes behave as before (no extra `find`). When present, each successful write records one event per written document via `auditor.recordMongo`. This library does not depend on `btrz-panopticon`; the auditor is duck-typed:
-
-    auditor = {
-      strict: false, // when true, missing identity throws and update/remove await audit; when false, audit is fire-and-forget
-      recordMongo({accountId, collectionName, objectId, userId, operation, query, payload}) {}
-    };
+Changed in v4.7.0 we added the optional `auditor` parameter. When omitted, `null`, or `undefined`, writes behave as before (no extra `find`). When present, each successful write records one event per written document via `auditor.recordMongo`. See **Audit: panopticon, context, and when writes throw** below.
 
 Creates a new instance of a simple dao.
 The `config` argument is expected to have the form.
@@ -74,6 +69,94 @@ The `config` argument is expected to have the form.
         uris: ["127.0.0.1:27017"]
       }
     };
+
+### Audit: panopticon, context, and when writes throw
+
+Writes (`save`, `update`, `remove`, `removeById`) can record one event per written document. Reads are never audited.
+
+This library does **not** depend on `btrz-panopticon`. Pass an auditor as the third constructor argument. The auditor is duck-typed:
+
+    auditor = {
+      strict: false, // when true, missing identity throws after the write; when false, audit is fire-and-forget
+      recordMongo({accountId, collectionName, objectId, userId, operation, query, payload}) {}
+    };
+
+#### Adding panopticon
+
+Install `btrz-panopticon` in the **calling** service (API), not in this package. Create an auditor and pass it into `SimpleDao`:
+
+    const {createAuditor} = require("btrz-panopticon");
+    const {SimpleDao} = require("btrz-simple-dao");
+
+    const auditor = createAuditor({
+      ...config.auditLogger, // bucket, region, credentials, …
+      strict: process.env.NODE_ENV === "development" || process.env.NODE_ENV === "test"
+    }, logger);
+
+    const dao = new SimpleDao(config, logger, auditor);
+
+Omit the auditor (or pass `null` / `undefined`) and writes behave as before: no extra `find`, no events.
+
+Use `strict: true` in development and tests so missing identity fails loudly. In production keep `strict: false` so a missing audit field never fails the Mongo write. Incomplete panopticon config (missing bucket/region/credentials) returns a no-op auditor with `strict: false`.
+
+#### How context is used
+
+Optional `context` is `{accountId, userId}`. It is ignored unless an auditor was passed to the constructor. Both fields are optional. A string last argument is **not** treated as `userId`.
+
+    dao.save(model, {accountId, userId});
+    dao.for(Model).update(query, update, options, {accountId, userId});
+    dao.for(Model).remove(query, {accountId, userId});
+    dao.for(Model).removeById(id, {accountId, userId});
+
+On `update`, context is the **fourth** argument so `{multi: true}` is not treated as context. Callers who skip `options` pass `undefined`:
+
+    dao.for(Account).update(query, {$set: {updatedBy}}, undefined, {accountId, userId});
+
+Identity is resolved in this order (first present wins):
+
+**userId**
+
+1. `context.userId`
+2. `model.updatedBy` (`save`)
+3. `update.$set.updatedBy` (`update`)
+4. missing (`remove` / `removeById` have no `updatedBy` fallback)
+
+**accountId**
+
+1. `context.accountId`
+2. `model.accountId` (`save`)
+3. scalar `query.accountId`
+4. `update.$set.accountId`
+5. missing
+
+`accountId` is never read from documents returned by a pre-write find. A query / `$set` value is scalar only if it is not `null` and not a plain object (`$in` / `$eq` objects are ignored).
+
+**objectId** comes from `model._id` after save, from a scalar or `$in` query `_id`, or from a `{_id: 1}` find that runs in parallel with `update` / `remove` when the query does not already have `_id`.
+
+#### When context is necessary
+
+Context is only needed when an auditor is present **and** identity cannot be taken from the model or the write itself.
+
+Pass `context` when:
+
+- The document has no `accountId` field (for example `Account`, where `_id` *is* the account). Do not add `accountId` onto that document just for audit.
+- `updatedBy` is not on the model (`save`) and not in `$set` (`update`).
+- You `remove` / `removeById`. Deletes have no `$set.updatedBy`; `removeById` queries `{_id}` only, so both `accountId` and `userId` must come from context.
+
+You can omit context when the model already has `accountId` and `updatedBy` (`save`), or the query / `$set` already has a scalar `accountId` and `$set.updatedBy` (`update`).
+
+#### When audit throws
+
+Audit never runs if the Mongo write threw.
+
+When `auditor.strict` is **false** (production): missing identity skips `recordMongo`; audit errors are logged; `update` / `remove` return without waiting for audit. The write result is unchanged.
+
+When `auditor.strict` is **true** (dev/test): the write still happens first, then audit is awaited and **throws** `Error` with message `[btrz-simple-dao] audit identity missing: …` if:
+
+- **save:** `_id`, `userId`, or `accountId` is still missing after the write.
+- **update / remove:** `userId` is missing, or any matched target is missing `accountId` or `_id`.
+
+An empty match is not an error (no events, no throw). If `recordMongo` itself throws (panopticon `strict`), that error also propagates after the write.
 
 ### .for(Model)
 
@@ -141,7 +224,7 @@ The aggregate method will use the following options when calling the database.
 It will save the model into a collection for that model (see above on the `for` method to understand how the collection name is set).
 There is no serialization strategy at the moment so "all" public methods and properties will be saved into the database.
 
-Optional `context` is `{accountId, userId}` and is used only when an `auditor` was passed to the constructor. A string last argument is not treated as `userId`. `userId` is taken from `context.userId` when provided, else `model.updatedBy`. `accountId` is taken from `context.accountId` when provided, else `model.accountId`. After a successful save the auditor records `operation: "insert"` with the saved model as `payload`.
+Optional `context` is `{accountId, userId}` (see **Audit** above). After a successful save the auditor records `operation: "insert"` with the saved model as `payload`.
 
 ### .dropCollection(name)
 
@@ -213,7 +296,7 @@ It will perform a `remove` on the collection that the operator have been created
 
 You can pass anything to the id not just ObjectID, it will depend on what do you use to generate the `_id` in the mongo collections.
 
-Optional `context` is `{accountId, userId}` and is used only when an `auditor` was passed to the constructor. `removeById` can record when `context.accountId` is provided (the query remains `{_id}`).
+Optional `context` is `{accountId, userId}` (see **Audit** above). `removeById` can record when `context.accountId` is provided (the query remains `{_id}`).
 
 ### .remove(query, context?)
 
@@ -221,7 +304,7 @@ It will perform a `remove` on the collection that the operator have been created
 
     simpleDao.for(Account).remove({name: "super"}); //Returns a promise that will resolve to the remove result: {ok: 1, n: 5} where n is the count of deleted documents.
 
-Optional `context` is `{accountId, userId}` and is used only when an `auditor` was passed to the constructor. A string last argument is not treated as `userId`. `accountId` is taken from `context.accountId` when provided, else the query. Matching `_id`s are resolved in parallel with the write. When `auditor.strict` is false (production), the write result is returned without waiting for audit. When `strict` is true, the method awaits audit and missing identity throws after the write. Each deleted document records `operation: "delete"` (no `payload`).
+Optional `context` is `{accountId, userId}` (see **Audit** above). Each deleted document records `operation: "delete"` (no `payload`).
 
 ### .update(query, update, options, context?)
 
@@ -230,11 +313,11 @@ The query, update and options are the same as with the node mongodb driver updat
 
     simpleDao.for(Account).update({name: "new account"}, { $set: {name: "Peter account"}}); //Returns a promise with the result report than the node mongodb driver.
 
-Optional `context` is `{accountId, userId}` and is the **fourth** argument so `{multi: true}` is not treated as context. Callers who skip `options` pass `undefined`:
+Optional `context` is `{accountId, userId}` and is the **fourth** argument (see **Audit** above). Callers who skip `options` pass `undefined`:
 
     simpleDao.for(Account).update(query, {$set: {updatedBy}}, undefined, {accountId, userId});
 
-`userId` is taken from `context.userId` when provided, else `update.$set.updatedBy`. `accountId` is taken from `context.accountId` when provided, else the query or `$set.accountId`; it is not loaded from the document. When an auditor is present and `_id` is not already on the query, matching `_id`s are resolved in parallel with the write. When `auditor.strict` is false, that work does not delay the returned result. When `strict` is true, the method awaits audit and missing identity throws after the write. Each written document records `operation: "update"` with the filter as `query` and the update doc as `payload`. Without `{multi: true}` only the first match is written and recorded.
+Each written document records `operation: "update"` with the filter as `query` and the update doc as `payload`. Without `{multi: true}` only the first match is written and recorded.
 
 ### new innerCursor() //Private
 
