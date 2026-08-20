@@ -196,4 +196,41 @@ describe("audit helpers", () => {
     assert.equal(calls[0].operation, "delete");
     assert.equal("payload" in calls[0], false);
   });
+
+  it("recordUpdates forwards folder without replacing collectionName", async () => {
+    const calls = [];
+    await recordUpdates({recordMongo(event) { calls.push(event); }}, {
+      targets: [{_id: "1", accountId: "a"}],
+      collectionName: "accounts",
+      userId: "u1",
+      query: {_id: "1"},
+      payload: {$set: {a: 1}},
+      folder: "email-settings"
+    });
+    assert.equal(calls[0].collectionName, "accounts");
+    assert.equal(calls[0].folder, "email-settings");
+  });
+
+  it("recordUpdates omits folder when it is null or empty", async () => {
+    const calls = [];
+    await recordUpdates({recordMongo(event) { calls.push(event); }}, {
+      targets: [{_id: "1", accountId: "a"}],
+      collectionName: "accounts",
+      userId: "u1",
+      query: {_id: "1"},
+      payload: {$set: {a: 1}},
+      folder: null
+    });
+    await recordUpdates({recordMongo(event) { calls.push(event); }}, {
+      targets: [{_id: "1", accountId: "a"}],
+      collectionName: "accounts",
+      userId: "u1",
+      query: {_id: "1"},
+      payload: {$set: {a: 1}},
+      folder: ""
+    });
+    assert.equal("folder" in calls[0], false);
+    assert.equal("folder" in calls[1], false);
+    assert.equal(calls[0].collectionName, "accounts");
+  });
 });

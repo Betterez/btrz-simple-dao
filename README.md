@@ -78,7 +78,7 @@ This library does **not** depend on `btrz-panopticon`. Pass an auditor as the th
 
     auditor = {
       strict: false, // when true, missing identity throws after the write; when false, audit is fire-and-forget
-      recordMongo({accountId, collectionName, objectId, userId, operation, query, payload}) {}
+      recordMongo({accountId, collectionName, objectId, userId, operation, query, payload, folder}) {}
     };
 
 #### Adding panopticon
@@ -101,12 +101,14 @@ Use `strict: true` in development and tests so missing identity fails loudly. In
 
 #### How context is used
 
-Optional `context` is `{accountId, userId}`. It is ignored unless an auditor was passed to the constructor. Both fields are optional. A string last argument is **not** treated as `userId`.
+Optional `context` is `{accountId, userId, folder}`. It is ignored unless an auditor was passed to the constructor. Both identity fields are optional. A string last argument is **not** treated as `userId`.
 
-    dao.save(model, {accountId, userId});
-    dao.for(Model).update(query, update, options, {accountId, userId});
+    dao.save(model, {accountId, userId, folder: "email-settings"});
+    dao.for(Model).update(query, update, options, {accountId, userId, folder: "email-settings"});
     dao.for(Model).remove(query, {accountId, userId});
     dao.for(Model).removeById(id, {accountId, userId});
+
+`folder` is forwarded to `recordMongo` only when it is a non-empty string. `null`, `""`, or omitted means panopticon uses `collectionName` for the S3 path. `collectionName` on the event is always the Mongo collection.
 
 On `update`, context is the **fourth** argument so `{multi: true}` is not treated as context. Callers who skip `options` pass `undefined`:
 

@@ -101,13 +101,15 @@ class Operator {
       const auditor = this.simpleDao.auditor;
       let resolvedUserId = undefined;
       let targetsPromise;
+      let folder;
       if (auditor) {
-        const {userId, accountId} = normalizeContext(context);
-        resolvedUserId = resolveUserId({update, explicitUserId: userId});
+        const contextFields = normalizeContext(context);
+        folder = contextFields.folder;
+        resolvedUserId = resolveUserId({update, explicitUserId: contextFields.userId});
         const accountIdHint = resolveAccountId({
           query,
           update,
-          explicitAccountId: accountId
+          explicitAccountId: contextFields.accountId
         });
         // Find and update run concurrently. If multi is false, the first find
         // match may not be the document Mongo updates (no shared sort).
@@ -129,7 +131,8 @@ class Operator {
             userId: resolvedUserId,
             query,
             payload: update,
-            multi: Boolean(options && options.multi)
+            multi: Boolean(options && options.multi),
+            folder
           }),
           "SimpleDao: Error performing update audit"
         );
@@ -152,10 +155,12 @@ class Operator {
       const auditor = this.simpleDao.auditor;
       let resolvedUserId = undefined;
       let targetsPromise;
+      let folder;
       if (auditor) {
-        const {userId, accountId} = normalizeContext(context);
-        resolvedUserId = resolveUserId({explicitUserId: userId});
-        const accountIdHint = resolveAccountId({query, explicitAccountId: accountId});
+        const contextFields = normalizeContext(context);
+        folder = contextFields.folder;
+        resolvedUserId = resolveUserId({explicitUserId: contextFields.userId});
+        const accountIdHint = resolveAccountId({query, explicitAccountId: contextFields.accountId});
         // Find and remove run concurrently; matched ids can drift if data changes.
         targetsPromise = resolveTargets(collection, query, {accountIdHint});
         if (!auditor.strict) {
@@ -171,7 +176,8 @@ class Operator {
             targets: targetsPromise,
             collectionName: this.collectionName,
             userId: resolvedUserId,
-            query
+            query,
+            folder
           }),
           "SimpleDao: Error performing remove audit"
         );

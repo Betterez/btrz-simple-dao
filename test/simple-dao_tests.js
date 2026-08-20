@@ -719,6 +719,26 @@ describe("SimpleDao", () => {
         assert.equal(auditor.calls[0].userId, "u1");
       });
 
+      it("forwards context.folder without replacing collectionName", async () => {
+        const auditor = mockAuditor();
+        const dao = new SimpleDao(config, null, auditor);
+        await dao.save(Model.factory({a: 1, accountId: "acc1", updatedBy: "u1"}), {
+          folder: "email-settings"
+        });
+        assert.equal(auditor.calls[0].collectionName, collectionName);
+        assert.equal(auditor.calls[0].folder, "email-settings");
+      });
+
+      it("omits folder when context.folder is null or empty", async () => {
+        const auditor = mockAuditor();
+        const dao = new SimpleDao(config, null, auditor);
+        await dao.save(Model.factory({a: 1, accountId: "acc1", updatedBy: "u1"}), {folder: null});
+        await dao.save(Model.factory({a: 1, accountId: "acc1", updatedBy: "u1"}), {folder: ""});
+        assert.equal("folder" in auditor.calls[0], false);
+        assert.equal("folder" in auditor.calls[1], false);
+        assert.equal(auditor.calls[0].collectionName, collectionName);
+      });
+
       it("skips recordMongo when identity missing and not strict", async () => {
         const auditor = mockAuditor({strict: false});
         const dao = new SimpleDao(config, null, auditor);
@@ -1034,6 +1054,21 @@ describe("SimpleDao", () => {
           assert.deepEqual(auditor.calls[0].query, query);
           assert.deepEqual(auditor.calls[0].payload, update);
           assert.equal(findSpy.mock.callCount(), 0);
+        });
+
+        it("forwards context.folder without replacing collectionName", async () => {
+          const seeded = await simpleDao.save(Model.factory({a: 1, accountId: "acc1"}));
+          const auditor = mockAuditor();
+          const dao = new SimpleDao(config, null, auditor);
+          await dao.for(Model).update(
+            {_id: seeded._id, accountId: "acc1"},
+            {$set: {a: 9, updatedBy: "u1"}},
+            undefined,
+            {folder: "email-settings"}
+          );
+          await waitForCalls(auditor, 1);
+          assert.equal(auditor.calls[0].collectionName, collectionName);
+          assert.equal(auditor.calls[0].folder, "email-settings");
         });
 
         it("finds then records one update event per matched doc when multi is true", async () => {

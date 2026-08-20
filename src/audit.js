@@ -83,6 +83,22 @@ function scalarAccountId(source) {
   return value;
 }
 
+function optionalFolder(folder) {
+  if (!hasRequired(folder)) {
+    return undefined;
+  }
+  return folder;
+}
+
+function mongoEvent(fields, folder) {
+  const event = fields;
+  const resolvedFolder = optionalFolder(folder);
+  if (resolvedFolder !== undefined) {
+    event.folder = resolvedFolder;
+  }
+  return event;
+}
+
 function missingIdentityError(fields) {
   return new Error(`[btrz-simple-dao] audit identity missing: ${fields.join(", ")}`);
 }
@@ -91,7 +107,7 @@ function recordInsert(auditor, {model, collectionName, context}) {
   if (!auditor) {
     return;
   }
-  const {userId, accountId} = normalizeContext(context);
+  const {userId, accountId, folder} = normalizeContext(context);
   const resolvedUserId = resolveUserId({model, explicitUserId: userId});
   const resolvedAccountId = resolveAccountId({model, explicitAccountId: accountId});
   const objectId = model && model._id;
@@ -111,14 +127,14 @@ function recordInsert(auditor, {model, collectionName, context}) {
     }
     return;
   }
-  auditor.recordMongo({
+  auditor.recordMongo(mongoEvent({
     accountId: resolvedAccountId,
     collectionName,
     objectId,
     userId: resolvedUserId,
     operation: "insert",
     payload: model
-  });
+  }, folder));
 }
 
 async function resolveTargets(collection, query, {accountIdHint} = {}) {
@@ -134,7 +150,7 @@ async function resolveTargets(collection, query, {accountIdHint} = {}) {
   }));
 }
 
-async function recordUpdates(auditor, {targets, collectionName, userId, query, payload, multi}) {
+async function recordUpdates(auditor, {targets, collectionName, userId, query, payload, multi, folder}) {
   if (!auditor) {
     return;
   }
@@ -148,7 +164,7 @@ async function recordUpdates(auditor, {targets, collectionName, userId, query, p
     if (!hasRequired(target._id) || !hasRequired(target.accountId)) {
       continue;
     }
-    auditor.recordMongo({
+    auditor.recordMongo(mongoEvent({
       accountId: target.accountId,
       collectionName,
       objectId: target._id,
@@ -156,11 +172,11 @@ async function recordUpdates(auditor, {targets, collectionName, userId, query, p
       operation: "update",
       query,
       payload
-    });
+    }, folder));
   }
 }
 
-async function recordDeletes(auditor, {targets, collectionName, userId, query}) {
+async function recordDeletes(auditor, {targets, collectionName, userId, query, folder}) {
   if (!auditor) {
     return;
   }
@@ -173,14 +189,14 @@ async function recordDeletes(auditor, {targets, collectionName, userId, query}) 
     if (!hasRequired(target._id) || !hasRequired(target.accountId)) {
       continue;
     }
-    auditor.recordMongo({
+    auditor.recordMongo(mongoEvent({
       accountId: target.accountId,
       collectionName,
       objectId: target._id,
       userId,
       operation: "delete",
       query
-    });
+    }, folder));
   }
 }
 
