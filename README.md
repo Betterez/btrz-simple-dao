@@ -101,7 +101,7 @@ Use `strict: true` in development and tests so missing identity fails loudly. In
 
 #### How context is used
 
-Optional `context` is `{accountId, userId, folder}`. It is ignored unless an auditor was passed to the constructor. Both identity fields are optional. A string last argument is **not** treated as `userId`.
+Optional `context` is `{accountId, userId, folder, skipAudit}`. It is ignored unless an auditor was passed to the constructor. Both identity fields are optional. A string last argument is **not** treated as `userId`.
 
     dao.save(model, {accountId, userId, folder: "email-settings"});
     dao.for(Model).update(query, update, options, {accountId, userId, folder: "email-settings"});
@@ -109,6 +109,11 @@ Optional `context` is `{accountId, userId, folder}`. It is ignored unless an aud
     dao.for(Model).removeById(id, {accountId, userId});
 
 `folder` is forwarded to `recordMongo` only when it is a non-empty string. `null`, `""`, or omitted means panopticon uses `collectionName` for the S3 path. `collectionName` on the event is always the Mongo collection.
+
+`skipAudit: true` opts this write out of panopticon. The Mongo write still happens. SimpleDao does not call `recordMongo`, does not run the extra pre-update/remove find, and does not throw in strict mode. Only the boolean `true` skips; omitted, `false`, or `null` keeps current audit behavior.
+
+    dao.save(login, {accountId, userId, skipAudit: true});
+    dao.for(User).update(query, update, undefined, {accountId, userId, skipAudit: true});
 
 On `update`, context is the **fourth** argument so `{multi: true}` is not treated as context. Callers who skip `options` pass `undefined`:
 
@@ -149,7 +154,7 @@ You can omit context when the model already has `accountId` and `updatedBy` (`sa
 
 #### When audit throws
 
-Audit never runs if the Mongo write threw.
+Audit never runs if the Mongo write threw. `skipAudit: true` also skips audit after a successful write (no throw in strict mode).
 
 When `auditor.strict` is **false** (production): missing identity skips `recordMongo`; audit errors are logged; `update` / `remove` return without waiting for audit. The write result is unchanged.
 
@@ -226,7 +231,7 @@ The aggregate method will use the following options when calling the database.
 It will save the model into a collection for that model (see above on the `for` method to understand how the collection name is set).
 There is no serialization strategy at the moment so "all" public methods and properties will be saved into the database.
 
-Optional `context` is `{accountId, userId}` (see **Audit** above). After a successful save the auditor records `operation: "insert"` with the saved model as `payload`.
+Optional `context` is `{accountId, userId, skipAudit}` (see **Audit** above). After a successful save the auditor records `operation: "insert"` with the saved model as `payload`, unless `skipAudit` is `true`.
 
 ### .dropCollection(name)
 
@@ -298,7 +303,7 @@ It will perform a `remove` on the collection that the operator have been created
 
 You can pass anything to the id not just ObjectID, it will depend on what do you use to generate the `_id` in the mongo collections.
 
-Optional `context` is `{accountId, userId}` (see **Audit** above). `removeById` can record when `context.accountId` is provided (the query remains `{_id}`).
+Optional `context` is `{accountId, userId, skipAudit}` (see **Audit** above). `removeById` can record when `context.accountId` is provided (the query remains `{_id}`), unless `skipAudit` is `true`.
 
 ### .remove(query, context?)
 
@@ -306,7 +311,7 @@ It will perform a `remove` on the collection that the operator have been created
 
     simpleDao.for(Account).remove({name: "super"}); //Returns a promise that will resolve to the remove result: {ok: 1, n: 5} where n is the count of deleted documents.
 
-Optional `context` is `{accountId, userId}` (see **Audit** above). Each deleted document records `operation: "delete"` (no `payload`).
+Optional `context` is `{accountId, userId, skipAudit}` (see **Audit** above). Each deleted document records `operation: "delete"` (no `payload`), unless `skipAudit` is `true`.
 
 ### .update(query, update, options, context?)
 
@@ -315,7 +320,7 @@ The query, update and options are the same as with the node mongodb driver updat
 
     simpleDao.for(Account).update({name: "new account"}, { $set: {name: "Peter account"}}); //Returns a promise with the result report than the node mongodb driver.
 
-Optional `context` is `{accountId, userId}` and is the **fourth** argument (see **Audit** above). Callers who skip `options` pass `undefined`:
+Optional `context` is `{accountId, userId, skipAudit}` and is the **fourth** argument (see **Audit** above). Callers who skip `options` pass `undefined`:
 
     simpleDao.for(Account).update(query, {$set: {updatedBy}}, undefined, {accountId, userId});
 

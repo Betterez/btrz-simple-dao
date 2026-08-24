@@ -54,6 +54,10 @@ function normalizeContext(value) {
   return value;
 }
 
+function shouldSkipAudit(context) {
+  return normalizeContext(context).skipAudit === true;
+}
+
 function resolveAccountId({model, query, update, explicitAccountId} = {}) {
   if (hasRequired(explicitAccountId)) {
     const fromContext = scalarAccountId({accountId: explicitAccountId});
@@ -104,7 +108,7 @@ function missingIdentityError(fields) {
 }
 
 function recordInsert(auditor, {model, collectionName, context}) {
-  if (!auditor) {
+  if (!auditor || shouldSkipAudit(context)) {
     return;
   }
   const {userId, accountId, folder} = normalizeContext(context);
@@ -223,6 +227,7 @@ module.exports = {
   resolveUserId,
   resolveAccountId,
   normalizeContext,
+  shouldSkipAudit,
   scalarAccountId,
   missingIdentityError,
   recordInsert,

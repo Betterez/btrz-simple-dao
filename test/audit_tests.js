@@ -7,6 +7,7 @@ const {
   resolveAccountId,
   normalizeContext,
   scalarAccountId,
+  shouldSkipAudit,
   resolveTargets,
   recordUpdates,
   recordDeletes,
@@ -65,6 +66,15 @@ describe("audit helpers", () => {
   it("normalizeContext treats undefined and null as missing context", () => {
     assert.deepEqual(normalizeContext(undefined), {});
     assert.deepEqual(normalizeContext(null), {});
+  });
+
+  it("shouldSkipAudit is true only for boolean true", () => {
+    assert.equal(shouldSkipAudit({skipAudit: true}), true);
+    assert.equal(shouldSkipAudit({skipAudit: false}), false);
+    assert.equal(shouldSkipAudit({skipAudit: null}), false);
+    assert.equal(shouldSkipAudit({}), false);
+    assert.equal(shouldSkipAudit(undefined), false);
+    assert.equal(shouldSkipAudit("true"), false);
   });
 
   it("resolveAccountId prefers explicit over model, query, and $set", () => {

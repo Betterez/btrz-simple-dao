@@ -754,6 +754,31 @@ describe("SimpleDao", () => {
           /audit identity missing/
         );
       });
+
+      it("does not call recordMongo when context.skipAudit is true", async () => {
+        const auditor = mockAuditor();
+        const dao = new SimpleDao(config, null, auditor);
+        const saved = await dao.save(Model.factory({a: 1, accountId: "acc1", updatedBy: "u1"}), {
+          skipAudit: true
+        });
+        assert.ok(saved._id);
+        assert.equal(auditor.calls.length, 0);
+      });
+
+      it("does not throw in strict mode when skipAudit is true and identity is missing", async () => {
+        const auditor = mockAuditor({strict: true});
+        const dao = new SimpleDao(config, null, auditor);
+        const saved = await dao.save(Model.factory({a: 1}), {skipAudit: true});
+        assert.ok(saved._id);
+        assert.equal(auditor.calls.length, 0);
+      });
+
+      it("still records insert when skipAudit is false", async () => {
+        const auditor = mockAuditor();
+        const dao = new SimpleDao(config, null, auditor);
+        await dao.save(Model.factory({a: 1, accountId: "acc1", updatedBy: "u1"}), {skipAudit: false});
+        assert.equal(auditor.calls.length, 1);
+      });
     });
   });
 
@@ -1294,6 +1319,23 @@ describe("SimpleDao", () => {
 
           assert.equal(auditor.calls.length, 0);
         });
+
+        it("does not call recordMongo or find when skipAudit is true", async () => {
+          await simpleDao.save(Model.factory({name: "x", a: 1, accountId: "acc1"}));
+          const auditor = mockAuditor({strict: true});
+          const dao = new SimpleDao(config, null, auditor);
+          const findSpy = mock.method(Collection.prototype, "find");
+          const result = await dao.for(Model).update(
+            {name: "x", accountId: "acc1"},
+            {$set: {a: 9, updatedBy: "u1"}},
+            undefined,
+            {skipAudit: true}
+          );
+          await waitForAuditToSettle();
+          assert.equal(result.n, 1);
+          assert.equal(auditor.calls.length, 0);
+          assert.equal(findSpy.mock.callCount(), 0);
+        });
       });
     });
 
@@ -1392,6 +1434,23 @@ describe("SimpleDao", () => {
           assert.equal(doc, null);
           assert.equal(auditor.calls.length, 0);
         });
+
+        it("does not call recordMongo or find when skipAudit is true", async () => {
+          const seeded = await simpleDao.save(Model.factory({name: "x", accountId: "acc1"}));
+          const auditor = mockAuditor({strict: true});
+          const dao = new SimpleDao(config, null, auditor);
+          const findSpy = mock.method(Collection.prototype, "find");
+          const result = await dao.for(Model).remove(
+            {name: "x", accountId: "acc1"},
+            {userId: "u1", skipAudit: true}
+          );
+          await waitForAuditToSettle();
+          assert.equal(result.n, 1);
+          assert.equal(auditor.calls.length, 0);
+          assert.equal(findSpy.mock.callCount(), 0);
+          const db = await dao.connect();
+          assert.equal(await db.collection(collectionName).findOne({_id: seeded._id}), null);
+        });
       });
     });
 
@@ -1468,6 +1527,20 @@ describe("SimpleDao", () => {
           assert.equal(String(auditor.calls[0].objectId), String(seeded._id));
           assert.equal(auditor.calls[0].accountId, "acc1");
           assert.equal(auditor.calls[0].userId, "u1");
+        });
+
+        it("does not call recordMongo when skipAudit is true", async () => {
+          const seeded = await simpleDao.save(Model.factory({a: 1}));
+          const auditor = mockAuditor({strict: true});
+          const dao = new SimpleDao(config, null, auditor);
+          const result = await dao.for(Model).removeById(seeded._id, {
+            accountId: "acc1",
+            userId: "u1",
+            skipAudit: true
+          });
+          await waitForAuditToSettle();
+          assert.equal(result.n, 1);
+          assert.equal(auditor.calls.length, 0);
         });
 
         it("records delete when remove query includes _id and accountId", async () => {

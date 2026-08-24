@@ -4,6 +4,7 @@ const {
   resolveUserId,
   resolveAccountId,
   normalizeContext,
+  shouldSkipAudit,
   resolveTargets,
   recordUpdates,
   recordDeletes
@@ -99,10 +100,11 @@ class Operator {
       const db = await this.simpleDao.connect();
       const collection = db.collection(this.collectionName);
       const auditor = this.simpleDao.auditor;
+      const skipAudit = shouldSkipAudit(context);
       let resolvedUserId = undefined;
       let targetsPromise;
       let folder;
-      if (auditor) {
+      if (auditor && !skipAudit) {
         const contextFields = normalizeContext(context);
         folder = contextFields.folder;
         resolvedUserId = resolveUserId({update, explicitUserId: contextFields.userId});
@@ -121,7 +123,7 @@ class Operator {
       const result = await collection.update(query, update, Operator.cleanOptions(options));
       const endResult = result.result;
       endResult.updatedExisting = endResult.nModified > 0;
-      if (auditor) {
+      if (auditor && !skipAudit) {
         await settleAudit(
           this.simpleDao,
           auditor,
@@ -153,10 +155,11 @@ class Operator {
       const db = await this.simpleDao.connect();
       const collection = db.collection(this.collectionName);
       const auditor = this.simpleDao.auditor;
+      const skipAudit = shouldSkipAudit(context);
       let resolvedUserId = undefined;
       let targetsPromise;
       let folder;
-      if (auditor) {
+      if (auditor && !skipAudit) {
         const contextFields = normalizeContext(context);
         folder = contextFields.folder;
         resolvedUserId = resolveUserId({explicitUserId: contextFields.userId});
@@ -168,7 +171,7 @@ class Operator {
         }
       }
       const result = await collection.remove(query);
-      if (auditor) {
+      if (auditor && !skipAudit) {
         await settleAudit(
           this.simpleDao,
           auditor,
