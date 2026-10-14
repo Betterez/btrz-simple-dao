@@ -70,6 +70,20 @@ The `config` argument is expected to have the form.
       }
     };
 
+#### Connection pool size
+
+`config.db.options.maxPoolSize` (optional, integer >= 1) sets the maximum number of connections per server, passed to
+`MongoClient.connect`. When it is not set the client is created exactly as before
+(`{useNewUrlParser: true, useUnifiedTopology: true}`; the driver's default pool is 10 connections). Any other value
+(a string, a fraction, 0) throws when the `SimpleDao` is created; before this option existed the key was ignored.
+
+`waitQueueTimeoutMS` is not supported on purpose: with mongodb 3.x a connection checkout that times out marks the
+server Unknown, and every operation of that client then waits for server selection until the next heartbeat (about
+10 s), so a short wait timeout stalls the whole process instead of failing one operation.
+
+Daos share one client per connection string, as before; the pool size is part of that key, so two daos with the same
+connection string but different pool sizes get different clients.
+
 ### Audit: panopticon, context, and when writes throw
 
 Writes (`save`, `update`, `remove`, `removeById`) can record one event per written document. Reads are never audited.
