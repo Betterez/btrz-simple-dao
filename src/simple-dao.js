@@ -73,6 +73,30 @@ function getConnectionString(dbConfig) {
   return connectionString;
 }
 
+// The connection pool size a service may set in `db.options.maxPoolSize`. It is passed to MongoClient.connect only
+// when it is set, so a config without it connects exactly as before (driver default: 10 connections per server).
+// waitQueueTimeoutMS is deliberately not supported: with mongodb 3.x a checkout that times out marks the server
+// Unknown, and every operation of the client then waits for server selection until the next heartbeat (~10 s).
+function getClientOptions(dbConfig) {
+  const clientOptions = {useNewUrlParser: true, useUnifiedTopology: true};
+  const maxPoolSize = dbConfig.options.maxPoolSize;
+  if (maxPoolSize !== undefined && maxPoolSize !== null) {
+    assert(Number.isInteger(maxPoolSize) && maxPoolSize >= 1,
+      "When specified, database config 'maxPoolSize' must be an integer >= 1");
+    clientOptions.maxPoolSize = maxPoolSize;
+  }
+  return clientOptions;
+}
+
+// Clients are shared by connection string. The pool size is part of the key, so a dao configured with another pool
+// size never silently reuses a client built with a different one; without it the key is the connection string, as
+// before.
+function getClientKey(connectionString, clientOptions) {
+  return clientOptions.maxPoolSize === undefined ?
+    connectionString :
+    `${connectionString}#maxPoolSize=${clientOptions.maxPoolSize}`;
+}
+
 function getCollectionName(ctrFunc) {
   let collectionName = ctrFunc.name.toLowerCase();
   if (ctrFunc.collectionName) {
@@ -81,12 +105,15 @@ function getCollectionName(ctrFunc) {
   return collectionName;
 }
 
-// A collection of all connections to the DB, keyed by the connection string that was used to connect
+// A collection of all connections to the DB, keyed by the connection string that was used to connect (plus the pool
+// settings, when any are set: see getClientKey)
 const mongoClients = {};
 
 class SimpleDao {
   constructor(options, logger, auditor) {
     this.connectionString = getConnectionString(options.db);
+    this.clientOptions = getClientOptions(options.db);
+    this.clientKey = getClientKey(this.connectionString, this.clientOptions);
     this.logger = logger;
     this.auditor = auditor || null;
   }
@@ -117,7 +144,7 @@ class SimpleDao {
   }
 
   async _getMongoClient() {
-    const existingClient = mongoClients[this.connectionString];
+    const existingClient = mongoClients[this.clientKey];
 
     if (existingClient) {
       return existingClient;
@@ -129,18 +156,18 @@ class SimpleDao {
 
     try {
       console.log("cnstr", this.connectionString);
-      mongoClients[this.connectionString] = MongoClient.connect(this.connectionString, {useNewUrlParser: true, useUnifiedTopology: true});
-      const client = await mongoClients[this.connectionString];
+      mongoClients[this.clientKey] = MongoClient.connect(this.connectionString, this.clientOptions);
+      const client = await mongoClients[this.clientKey];
 
       client.on("close", (err) => {
-        Reflect.deleteProperty(mongoClients, this.connectionString);
+        Reflect.deleteProperty(mongoClients, this.clientKey);
         this.logError("Connection to Mongo unexpectedly closed", err);
       });
 
       this.logInfo(`Connected to Mongo server(s): ${connectionStringWithoutCredentials}`);
       return client;
     } catch (err) {
-      Reflect.deleteProperty(mongoClients, this.connectionString);
+      Reflect.deleteProperty(mongoClients, this.clientKey);
       this.logError("Failed to connect to Mongo", err);
       throw err;
     }
@@ -246,5 +273,6 @@ class SimpleDao {
 
 module.exports = {
   SimpleDao,
-  getConnectionString
+  getConnectionString,
+  getClientOptions
 };

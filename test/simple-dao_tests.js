@@ -406,6 +406,116 @@ describe("SimpleDao", () => {
     });
   });
 
+  describe("connection pool options", () => {
+    const {getClientOptions} = require("../src/simple-dao");
+    const DRIVER_DEFAULT_CLIENT_OPTIONS = {useNewUrlParser: true, useUnifiedTopology: true};
+
+    function configFor(database, poolOptions = {}) {
+      return {
+        db: {
+          options: {database, username: "", password: "", ...poolOptions},
+          uris: ["127.0.0.1:27017"]
+        }
+      };
+    }
+
+    // The pool the driver actually built (same path btrz-monitoring reads the max pool size from).
+    function livePoolOptions(client) {
+      const [server] = Array.from(client.topology.s.servers.values());
+      const {maxPoolSize, waitQueueTimeoutMS} = server.s.pool.options;
+      return {maxPoolSize, waitQueueTimeoutMS};
+    }
+
+    async function seedOneDocument(dao) {
+      const db = await dao.connect();
+      await db.collection(collectionName).insertOne({a: 1});
+    }
+
+    // Holds the only connection of a 1-connection pool for ~1.5 s with a real slow query on the server.
+    function holdTheConnection(dao) {
+      return dao.for(Model).find({$where: "sleep(1500) || true"}).toArray();
+    }
+
+    async function closeClient(dao) {
+      const client = await dao._getMongoClient();
+      await client.close();
+    }
+
+    it("should connect with the same options as before when maxPoolSize is not configured", async () => {
+      const connectionSpy = mock.method(MongoClient, "connect");
+      const dao = new SimpleDao(configFor("simple_dao_test_pool_1"));
+      const client = await dao._getMongoClient();
+
+      assert.strictEqual(connectionSpy.mock.callCount(), 1);
+      assert.deepStrictEqual(connectionSpy.mock.calls[0].arguments,
+        ["mongodb://127.0.0.1:27017/simple_dao_test_pool_1", DRIVER_DEFAULT_CLIENT_OPTIONS]);
+      assert.deepStrictEqual(livePoolOptions(client), {maxPoolSize: 10, waitQueueTimeoutMS: 0});
+      assert.strictEqual(dao.clientKey, dao.connectionString);
+      await closeClient(dao);
+    });
+
+    it("should treat a null maxPoolSize as not configured", () => {
+      assert.deepStrictEqual(getClientOptions(configFor("x", {maxPoolSize: null}).db), DRIVER_DEFAULT_CLIENT_OPTIONS);
+    });
+
+    it("should pass maxPoolSize to the driver when configured", async () => {
+      const connectionSpy = mock.method(MongoClient, "connect");
+      const dao = new SimpleDao(configFor("simple_dao_test_pool_2", {maxPoolSize: 25}));
+      const client = await dao._getMongoClient();
+
+      assert.deepStrictEqual(connectionSpy.mock.calls[0].arguments[1], {...DRIVER_DEFAULT_CLIENT_OPTIONS, maxPoolSize: 25});
+      assert.deepStrictEqual(livePoolOptions(client), {maxPoolSize: 25, waitQueueTimeoutMS: 0});
+      await closeClient(dao);
+    });
+
+    it("should not pass waitQueueTimeoutMS (a checkout timeout marks the server Unknown in mongodb 3.x)", () => {
+      assert.deepStrictEqual(getClientOptions(configFor("x", {waitQueueTimeoutMS: 200}).db), DRIVER_DEFAULT_CLIENT_OPTIONS);
+      assert.deepStrictEqual(getClientOptions(configFor("x", {maxPoolSize: 1, waitQueueTimeoutMS: 200}).db),
+        {...DRIVER_DEFAULT_CLIENT_OPTIONS, maxPoolSize: 1});
+    });
+
+    it("should reject a maxPoolSize that is not an integer >= 1", () => {
+      [0, -3, "10", 2.5, true].forEach((maxPoolSize) => {
+        assert.throws(() => {
+          return new SimpleDao(configFor("simple_dao_test", {maxPoolSize}));
+        }, /'maxPoolSize' must be an integer >= 1/, JSON.stringify(maxPoolSize));
+      });
+    });
+
+    it("should share a client only between daos with the same connection string and maxPoolSize", async () => {
+      const connectionSpy = mock.method(MongoClient, "connect");
+      const plain = new SimpleDao(configFor("simple_dao_test_pool_3"));
+      const pooled = new SimpleDao(configFor("simple_dao_test_pool_3", {maxPoolSize: 3}));
+      const pooledToo = new SimpleDao(configFor("simple_dao_test_pool_3", {maxPoolSize: 3}));
+
+      const plainClient = await plain._getMongoClient();
+      const pooledClient = await pooled._getMongoClient();
+      const pooledTooClient = await pooledToo._getMongoClient();
+
+      assert.strictEqual(connectionSpy.mock.callCount(), 2);
+      assert.notStrictEqual(plainClient, pooledClient);
+      assert.strictEqual(pooledClient, pooledTooClient);
+      assert.strictEqual(pooled.clientKey, "mongodb://127.0.0.1:27017/simple_dao_test_pool_3#maxPoolSize=3");
+      await closeClient(plain);
+      await closeClient(pooled);
+    });
+
+    it("should limit the pool to maxPoolSize connections: a second query waits for the only one", async () => {
+      const dao = new SimpleDao(configFor("simple_dao_test", {maxPoolSize: 1}));
+      await seedOneDocument(dao);
+      const slow = holdTheConnection(dao);
+      await new Promise((resolve) => { setTimeout(resolve, 100); });
+
+      const start = Date.now();
+      const found = await dao.for(Model).findOne({});
+      const waited = Date.now() - start;
+      assert.strictEqual(found.a, 1);
+      assert.ok(waited >= 1000, `waited only ${waited} ms: the pool has more than one connection`);
+      await slow;
+      await closeClient(dao);
+    });
+  });
+
   // this exists for compatibility with the soon-to-be-removed mongoskin API
   describe("connect().then(db => db.gridfs)", () => {
     let db = null;
